@@ -1,0 +1,2267 @@
+---
+title: "PD22_Pro11_Data_Analysis"
+author: "Brianna Garcia"
+date: "`r Sys.Date()`"
+output: html_document
+---
+# Document preparation
+## Set working directory
+```{r setup, include=FALSE}
+#From work PC
+# Set working directory for knitting
+#knitr::opts_knit$set(root.dir = "Z:/Brianna/Projects/Pro_Diel")
+
+# Set working directory for interactive use
+#setwd("Z:/Brianna/Projects/Pro_Diel")
+
+
+#From laptop
+# Set working directory for knitting
+knitr::opts_knit$set(root.dir = "/Volumes/KujLab/Brianna/Projects/Pro_Diel")
+
+# Set working directory for interactive use
+setwd("/Volumes/KujLab/Brianna/Projects/Pro_Diel")
+
+```
+
+## Set date
+```{r date}
+
+# Create a date string in YYYYMMDD format
+today <- format(Sys.Date(), "%Y%m%d")
+
+```
+
+## Load required packages
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(hms)
+library(lubridate)
+library(gridExtra)
+library(readxl)
+library(tidyverse)
+library(scales)
+library(RColorBrewer)
+library(cowplot)
+library(ggplot2)
+library(rain)
+library(viridis)
+library(entropy)
+library(Polychrome)
+library(treemapify)
+library(broom)
+library(patchwork)
+
+```
+# Filter volumes 
+Filter volumes represent the amount (volume) of culture liquid that was filtered and thus biological material collected on the filter and extracted for metabolite concentrations. Value outputs from riMAVEN represent the ng/mL concentrations in the LC-MS vial, and need to be converted to represent the concentration in the full filtered volume.
+## Load Data
+```{r load filter volumes}
+
+filt_volumes <- read_csv(file = "Metadata/ProchlorococcusExperiments(Pro11 RP PPL and DOC) modfied for R.csv")
+
+filt_volumes <- filt_volumes%>%
+  mutate(`PPLed weight (g)` = as.numeric(`PPLed weight (g)`))%>%
+  select(c(timepoint,replicateID,`DOC vial number`,
+           `Filtered weight (g)`,`NPOC (uM)`))%>%
+  mutate(timepoint = as.character(timepoint))
+
+str(filt_volumes)
+
+```
+
+# Prochlorococcus Cell Growth and Culturing Data 
+## Load Data Files 
+```{r Culturing data load, warning=FALSE, message = FALSE}
+
+allCellInfo <- read_xlsx('Documents/fromMIT/MIT9301 ProDOM diel all cell info_updated20231201.xlsx', skip=3)%>%
+  rename(time = `time of sample`, 
+         date = `date of sample`,
+         light_status = `lights (on/off)`,
+         light_level = `light level (uE)`,
+         cells_mL = `cell concentration (cells/ml)`,
+         G1 = `G1%`,
+         G2 = `G2%`,
+         S = `S%`)%>%
+  mutate(time = as_hms(time), 
+         date_time = as_datetime(date + as.duration(time)))%>%
+  separate(label, into = c("timepoint", "culture_letter"), sep = -1, remove = FALSE)%>%
+  mutate(timepoint = as.integer(timepoint))
+
+str(allCellInfo)
+
+light_status <- read.csv('Documents/fromMIT/light_status.csv')%>%
+  mutate(time = as_hms(as.POSIXct(time, format = "%I:%M%p")),
+         date = as.Date(date, format = "%m/%d/%Y"),
+         date_time = as_datetime(date) +as.duration(time),
+         light_status = as.factor(light_status))
+
+str(light_status)
+
+allCellInfo <- merge(allCellInfo,light_status,by="timepoint",all.y=TRUE)
+
+allCellInfo <- allCellInfo%>%
+  select(-c("date.x","time.x","light_status.x","date_time.x"))%>%
+  rename(light_status = light_status.y,
+         date = date.y,
+         time = time.y,
+         date_time = date_time.y)%>%
+  mutate(light_period = case_when(is.na(light_period) & light_status == "on" ~ 0,
+                                  is.na(light_period) & light_status == "off" ~ 1, 
+                                  TRUE ~ light_period))
+rm(light_status)
+
+```
+
+### Load in extrapolated cell counts
+These were calculated by Katie Halloran and provided via csv file 
+```{r extrapolated cell counts}
+
+cellCounts_extrap <- read.csv(file = "Documents/fromMIT/extrapolated_cellcounts.csv")
+
+str(cellCounts_extrap)
+
+cellCounts_extrap <- cellCounts_extrap%>%
+  separate(Comment, into = c("part1", "part2"), sep = " ", remove = FALSE) %>%
+  mutate(
+    replicateID = toupper(gsub("[0-9]+", "", part1)),
+    timepoint = as.numeric(gsub("[^0-9]", "", part2))
+  ) %>%
+  select(-part1, -part2)%>%
+  mutate(label = paste0(timepoint,replicateID))
+
+
+```
+## Plot cell culture data
+### Plot - Cell Counts
+```{r cell counts, warning=FALSE}
+
+#Plot the average cell count +/- standard deviation
+cellCounts_time <- allCellInfo %>%
+  select(label, timepoint, culture_letter, date, time, cells_mL, date_time) %>%
+  group_by(timepoint) %>%
+  mutate(mean = ifelse(is.na(cells_mL), NA, mean(cells_mL, na.rm = TRUE)),
+         sdev = sd(cells_mL, na.rm = TRUE))
+
+cellCounts_time_plot <- cellCounts_time %>%
+  ggplot(aes(x = date_time, y = mean)) +
+  # First rectangle
+  geom_rect(aes(xmin = as.POSIXct("2022-07-28 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-29 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE)+
+   # Second rectangle
+  geom_rect(aes(xmin = as.POSIXct("2022-07-29 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-30 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", inherit.aes = FALSE) +
+  geom_smooth(color = "black") +
+  geom_errorbar(aes(ymin = mean - sdev, ymax = mean + sdev), width = .2, 
+                position = position_dodge(0.05)) +
+  geom_point(size = 3,fill="white",shape=21) +
+  scale_x_datetime(breaks = cellCounts_time$date_time,labels = cellCounts_time$timepoint) +
+  labs(x = "Sampling timepoint (hours)", y = "Cell counts (cells/mL)")+
+  theme_bw(base_size = 14)
+#+ theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1))
+
+# Print the plot
+print(cellCounts_time_plot)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_pro11_cellCounts_extToZero_300dpi_", today, "_bmg.png")
+
+# Save the plot
+#ggsave(filename, plot = cellCounts_time_plot, width = 11, height = 8.5, dpi = 300)
+
+```
+
+### Plot - Cell Counts (Extrapolated)
+```{r cell counts extrap plot}
+
+cellCounts_extrap_plot <- cellCounts_extrap %>%
+  filter(typeOfData != "interpolated")%>%
+  ggplot(aes(x = time_h, y = cell_count_mean)) +
+  # First rectangle
+  geom_rect(aes(xmin = 10, 
+                 xmax = 20, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5)+
+   # Second rectangle
+  geom_rect(aes(xmin = 34, 
+                 xmax = 44, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90") +
+  geom_smooth(color = "black") +
+  geom_errorbar(aes(ymin = cell_count_mean - cell_count_sd, ymax = cell_count_mean + cell_count_sd), width = .2, 
+                position = position_dodge(0.05)) +
+  geom_point(size = 3,shape=21, aes(fill = typeOfData)) +
+  scale_x_continuous(breaks = cellCounts_extrap$time_h,labels = cellCounts_extrap$time_h) +
+scale_fill_manual(values = c(
+    "extrapolated" = "darkred",
+    "measured" = "white"))+
+    labs(x = "Sampling timepoint (hours)", y = "Cell counts (cells/mL)")+
+  theme_bw(base_size = 14)
+
+# Print the plot
+print(cellCounts_extrap_plot)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_pro11_cellCounts_extrapolatedToZero_300dpi_", today, "_bmg.png")
+
+# Save the plot
+#ggsave(filename, plot = cellCounts_extrap_plot, width = 11, height = 8.5, dpi = 300)
+
+```
+
+### Plot - Cell Cycle
+```{r cell cycle, warning=FALSE}
+
+cellCycle_time <- allCellInfo%>%
+  select(label,timepoint,culture_letter,date,time,G1,G2,S,date_time)%>%
+  pivot_longer(cols = c("G1","G2","S"),names_to = "cell_cycle", values_to = "percentage")%>%
+  group_by(timepoint,cell_cycle)%>%
+  mutate(mean = mean(percentage,na.rm=TRUE),
+         sdev = sd(percentage,na.rm=TRUE))
+
+cellCycle_time_plot <- cellCycle_time %>%
+  ggplot(aes(x = date_time, y = mean, color = cell_cycle,fill=cell_cycle)) +
+  # First rectangle
+  geom_rect(aes(xmin = as.POSIXct("2022-07-28 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-29 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE)+
+  # Second rectangle
+  geom_rect(aes(xmin = as.POSIXct("2022-07-29 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-30 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_line(linewidth = 1.5) +
+  geom_errorbar(aes(ymin = mean - sdev, ymax = mean + sdev), width = .2, 
+                position = position_dodge(0.05)) +
+  geom_point(size = 2.5,shape=21,color="black") +
+  scale_x_datetime(breaks = cellCycle_time$date_time, labels = cellCycle_time$timepoint) +
+  labs(x = "Sampling timepoint (hours)", y = "Cell counts (cells/mL)",fill = "Phase") +
+  theme_bw(base_size = 14)+
+  scale_color_brewer(guide = "none", type = "qual",palette = 3)+
+  scale_fill_brewer(type = "qual",palette = 3)
+
+
+print(cellCycle_time_plot)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_pro11_cellCycle_extToZero_300dpi_", today, "_bmg.png")
+
+# Save the plot
+#ggsave(filename, plot = cellCycle_time_plot, width = 11, height = 8.5, dpi = 300)
+
+
+
+```
+### Plot - Light intensity
+```{r light, warning=FALSE}
+
+light_time <- allCellInfo%>% 
+  group_by(timepoint)%>%
+  mutate(light_level_plot = case_when(is.na(light_level) ~ 0.01, TRUE ~ light_level))%>%
+  summarise_each(funs(if(is.numeric(.)) mean(., na.rm = TRUE) else first(.)))
+
+light_time_plot <- light_time%>%
+  ggplot(aes(x=date_time))+
+  geom_area(aes(y=light_level_plot), fill="white")+
+  theme_classic(base_size=14)+
+  theme(panel.background = element_rect(fill = "black",color="black"))+
+  scale_y_continuous(expand = c(0, 0))+
+  scale_x_datetime(breaks=cellCounts_time$date_time,labels=cellCounts_time$timepoint)+
+  labs(x ="Sampling timepoint (hours)", y="Light level (lumens)")
+
+light_time_plot
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_pro11_lightLevels_extToZero_300dpi_", today, "_bmg.png")
+
+# Save the plot
+#ggsave(filename, plot = light_time_plot, width = 11, height = 8.5, dpi = 300)
+
+
+```
+### Plot - Forward Angle Light Scatter (FALS)
+```{r FALS, warning=FALSE}
+
+FALS_time <- allCellInfo%>%
+  select(label,timepoint,culture_letter,date,time,FALS,date_time)%>%
+  group_by(timepoint)%>%
+  mutate(mean = mean(FALS,na.rm=TRUE),
+         sdev = sd(FALS,na.rm=TRUE))
+
+FALS_time_plot <- FALS_time%>%
+  ggplot(aes(x=date_time,y=mean))+
+      # First rectangle
+  geom_rect(aes(xmin = as.POSIXct("2022-07-28 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-29 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE)+
+  # Second rectangle
+  geom_rect(aes(xmin = as.POSIXct("2022-07-29 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-30 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_line(linewidth = 1.5) +
+  geom_errorbar(aes(ymin=mean-sdev, ymax=mean+sdev), width=.2, 
+                position=position_dodge(0.05))+
+  geom_point(size=3,shape=21,fill="white")+
+  scale_x_datetime(breaks=FALS_time$date_time,labels=FALS_time$timepoint)+
+  labs(x="Sampling timepoint (hours)",y="FALS")+
+  theme_bw(base_size = 14)
+
+print(FALS_time_plot)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_pro11_FALS_extToZero_300dpi_", today, "_bmg.png")
+
+# Save the plot
+#ggsave(filename, plot = FALS_time_plot, width = 11, height = 8.5, dpi = 300)
+
+```
+### Plot - Chlorophyll concentration per cell
+```{r Chl, warning=FALSE}
+
+Chl_time <- allCellInfo%>%
+  select(label,timepoint,culture_letter,date,time,`chl/cell`,date_time)%>%
+  group_by(timepoint)%>%
+  mutate(mean = mean(`chl/cell`,na.rm=TRUE),
+         sdev = sd(`chl/cell`,na.rm=TRUE))
+
+Chl_time_plot <- Chl_time%>%
+  ggplot(aes(x=date_time,y=mean))+
+     # First rectangle
+  geom_rect(aes(xmin = as.POSIXct("2022-07-28 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-29 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE)+
+  # Second rectangle
+  geom_rect(aes(xmin = as.POSIXct("2022-07-29 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-30 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_line(linewidth = 1.5) +
+  geom_errorbar(aes(ymin=mean-sdev, ymax=mean+sdev), width=.2, 
+                position=position_dodge(0.05))+
+  geom_point(size=3,shape=21,fill="white")+
+  scale_x_datetime(breaks=Chl_time$date_time,labels=Chl_time$timepoint)+
+  labs(x="Sampling timepoint (hours)",y="Chl/cell")+
+  theme_bw(base_size = 14)
+
+print(Chl_time_plot)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_pro11_ChlCell_extToZero_300dpi_", today, "_bmg.png")
+
+# Save the plot
+#ggsave(filename, plot = Chl_time_plot, width = 11, height = 8.5, dpi = 300)
+
+```
+### Combined plots from above
+```{r cellCount and FALS plot, warning=TRUE}
+
+cellCount_FALS <- allCellInfo %>% 
+  group_by(timepoint) %>%
+  summarise(across(where(is.numeric), 
+                   list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE)),
+                   .names = "{col}_{fn}"),
+            across(where(~!is.numeric(.)), first))
+
+cellCount_FALS_plot <- cellCount_FALS%>%
+  mutate(FALS_mean_larger = FALS_mean * 10^11.2,
+         FALS_sd_larger = FALS_sd * 10^11.2)%>%
+  ggplot(aes(x = date_time)) +
+    geom_rect(aes(xmin = as.POSIXct("2022-07-28 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-29 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE)+
+  # Second rectangle
+  geom_rect(aes(xmin = as.POSIXct("2022-07-29 20:00:00",tz="UTC"), 
+                 xmax = as.POSIXct("2022-07-30 06:00:00",tz="UTC"), 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+ geom_errorbar(aes(ymin=cells_mL_mean-cells_mL_sd, ymax=cells_mL_mean+cells_mL_sd), width=.2, 
+                position=position_dodge(0.05))+
+   geom_line(aes(y = cells_mL_mean), linewidth = 1.25) +
+  geom_point(aes(y = cells_mL_mean),  size = 3,shape=21,fill="white") +
+    geom_errorbar(aes(ymin=FALS_mean_larger-FALS_sd_larger, ymax=FALS_mean_larger+FALS_sd_larger), width=.2, 
+                position=position_dodge(0.05),color = "sienna3")+
+  geom_line(aes(y = FALS_mean_larger), color = "sienna3", linewidth = 1.25) +
+  geom_point(aes(y = FALS_mean_larger),color="sienna3", fill = "white", size = 3,shape=21)+
+  scale_y_continuous(name = "Cell concentration (cells/ml)",sec.axis = sec_axis(~ ./10^11.2, name = "FALS"))+
+  labs(x = "Date & time of sample collection",
+       y = "Cell Concentration (cells/ml)") +
+  theme_bw(base_size=14)+
+  theme(axis.text.y.right = element_text(color = "sienna3"), 
+    axis.title.y.right = element_text(color = "sienna3"))+
+  scale_x_datetime(breaks=cellCount_FALS$date_time,labels=cellCount_FALS$timepoint)+
+  labs(x="Sampling timepoint (hours)",y="Chl/cell")
+
+cellCount_FALS_plot
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_pro11_CellCount_FALS_extToZero_300dpi_", today, "_bmg.png")
+
+# Save the plot
+#ggsave(filename, plot = cellCount_FALS_plot, width = 11, height = 8.5, dpi = 300)
+
+```
+
+```{r combined cell data plot, warning=FALSE}
+
+# Combine plots with shared x-axis
+combinedCellData_plot <- plot_grid(
+  light_time_plot + theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()),
+  cellCycle_time_plot + theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank()),
+  cellCount_FALS_plot,
+  ncol = 1,
+  align = "v",
+  axis = "lr",  # Align plots vertically with shared x-axis
+  rel_heights = c(0.2, 0.5, 0.5)
+)
+
+combinedCellData_plot
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_pro11_combinedCellData_extToZero_300dpi_", today, "_bmg.png")
+
+# Save the plot
+#ggsave(filename, plot = combinedCellData_plot, width = 11, height = 8.5, dpi = 300)
+
+```
+# Intracellular Metabolite Quantification
+## Load Data Files
+```{r load metabolite data}
+
+#Load sequence sheet
+
+intra_seq <- read.csv("Altis/2023_0718_Pro11 RP Diel rerun/sequence_fromMethods/mtab_Pro11_RP_Diel_Altis_071823_rerun_forElMaven.csv")
+
+#Load data quantified with the Mili-Q (MQ) generated standard curve
+
+intra_mq_quant <- read.csv("riMAVEN15/Pro11_RP_Filters_Original/Pro11_RP_filters_Original_MQ_mtabTable.2025.05.10.csv",check.names = FALSE)
+
+intra_mq_curve <- read.csv("riMAVEN15/Pro11_RP_Filters_Original/Pro11_RP_filters_Original_MQ_curveInfo.2025.05.10.csv",check.names = FALSE)
+
+#Load data quantified with the Matrix-Matched (MM) generated standard curve
+
+intra_mm_quant <- read.csv("riMAVEN15/Pro11_RP_Filters_Original/Pro11_RP_filters_Original_matrix_mtabTable.2025.05.10.csv",check.names = FALSE)
+
+intra_mm_curve <- read.csv("riMAVEN15/Pro11_RP_Filters_Original/Pro11_RP_filters_Original_matrix_curveInfo.2025.05.10.csv",check.names = FALSE)
+
+```
+
+## Transpose quant table format of each quant table
+For some reason metabolites were exported as columns, want metabolites as rows and samples as columns
+```{r long quant}
+
+#MM
+colnames(intra_mm_quant)
+
+EE_MW_mm <- intra_mm_quant%>%
+  select(SRMname,cleanName,MW,extEff)
+
+intra_mm_quant_long <- intra_mm_quant%>%
+  pivot_longer(cols = c("100_RP_filter_C_T38":"pooled_9"), 
+               names_to = "cName",
+               values_to = "Concentration")
+
+intra_mm_quant <- intra_mm_quant_long %>%
+  select(cName,SRMname,Concentration)%>%
+  pivot_wider(names_from = SRMname, values_from = Concentration)
+
+#MQ
+colnames(intra_mq_quant)
+
+EE_MW_mq <- intra_mq_quant%>%
+  select(SRMname,cleanName,MW,extEff)
+
+intra_mq_quant_long <- intra_mq_quant%>%
+  pivot_longer(cols = c("100_RP_filter_C_T38":"pooled_9"), 
+               names_to = "cName",
+               values_to = "Concentration")
+
+intra_mq_quant <- intra_mq_quant_long %>%
+  select(cName,SRMname,Concentration)%>%
+  pivot_wider(names_from = SRMname, values_from = Concentration)
+
+rm(intra_mm_quant_long,intra_mq_quant_long)
+
+MW_EE <- distinct(rbind(EE_MW_mm,EE_MW_mq))
+
+rm(EE_MW_mm,EE_MW_mq)
+
+```
+
+## Rename columns and extract/merge in various metadata
+### MQ quantified metabolites
+```{r metabolite MQ metadata,echo=FALSE,message=FALSE}
+
+date_time <- allCellInfo%>%
+  select(timepoint,date_time)%>%
+  mutate(timepoint = as.character(timepoint))
+
+intra_mq_seq_filt <- intra_seq%>%
+  filter(shortName %in% intra_mq_quant$cName)%>%
+  rename(runOrder = forSorting)%>%
+  select(-c(concentration_ngML,tempFlag))
+
+pooled_mq <- intra_mq_seq_filt %>%
+  filter(grepl("pooled", shortName)) %>%
+  mutate(runOrder_name = NA, dataType = NA, source = NA, replicateID = NA, timepoint = NA)
+
+samples_mq <- intra_mq_seq_filt%>%
+filter(!grepl("pooled", shortName)) %>%
+  separate(shortName, into = c("runOrder_name", "dataType", "source", "replicateID", "timepoint"), sep = "_",remove = FALSE) %>%
+  mutate(timepoint = as.character(gsub("T", "", timepoint)))
+
+# Combine results
+intra_mq_seq_filt <- bind_rows(samples_mq, pooled_mq)%>%
+  select(-runOrder_name)%>%
+  mutate(type = case_when(grepl("Blank", replicateID) ~ "blank",
+                          is.na(replicateID) ~ "pool",
+                          TRUE ~ "sample"))
+
+colnames(intra_mq_quant)
+
+intra_mq_quant_longer <- pivot_longer(intra_mq_quant,cols = "2_3 dihydroxypropane-1-sulfonate":"xanthosine neg",names_to ="mtabName",values_to = "Concentration_ngmL")%>%
+  rename(shortName = cName)
+
+intra_MQ <- intra_mq_seq_filt %>%
+  left_join(intra_mq_quant_longer, by = "shortName") %>%
+  left_join(intra_mq_curve, by = "mtabName")%>%
+  left_join(date_time %>% distinct(timepoint, date_time), by = "timepoint",keep=TRUE)%>%
+  mutate(timepoint = coalesce(timepoint.x, timepoint.y)) %>%
+  select(-timepoint.x, -timepoint.y)
+
+rm(intra_mq_seq_filt, pooled_mq, samples_mq)
+
+```
+
+### MM quantified metabolites
+```{r metabolite MM metadata, echo=FALSE, message=FALSE}
+
+intra_mm_seq_filt <- intra_seq%>%
+  filter(shortName %in% intra_mm_quant$cName)%>%
+  rename(runOrder = forSorting)%>%
+  select(-c(concentration_ngML,tempFlag))
+
+pooled_mm <- intra_mm_seq_filt %>%
+  filter(grepl("pooled", shortName)) %>%
+  mutate(runOrder_name = NA, dataType = NA, source = NA, replicateID = NA, timepoint = NA)
+
+samples_mm <- intra_mm_seq_filt%>%
+filter(!grepl("pooled", shortName)) %>%
+  separate(shortName, into = c("runOrder_name", "dataType", "source", "replicateID", "timepoint"), sep = "_",remove = FALSE) %>%
+  mutate(timepoint = as.character(gsub("T", "", timepoint)))
+
+# Combine results
+intra_mm_seq_filt <- bind_rows(samples_mm, pooled_mm)%>%
+  select(-runOrder_name)%>%
+  mutate(type = case_when(grepl("Blank", replicateID) ~ "blank",
+                          is.na(replicateID) ~ "pool",
+                          TRUE ~ "sample"))
+
+colnames(intra_mm_quant)
+
+intra_mm_quant_longer <- pivot_longer(intra_mm_quant,cols = "2_3-dihydroxybenzoic acid":"xanthosine neg",names_to ="mtabName",values_to = "Concentration_ngmL")%>%
+  rename(shortName = cName)
+
+intra_MM <- intra_mm_seq_filt %>%
+  left_join(intra_mm_quant_longer, by = "shortName") %>%
+  left_join(intra_mm_curve, by = "mtabName") %>%
+  left_join(date_time %>% distinct(timepoint,date_time), by = "timepoint",keep=TRUE) %>%
+  mutate(timepoint = coalesce(timepoint.x, timepoint.y)) %>%
+  select(-timepoint.x, -timepoint.y)
+
+rm(intra_mm_seq_filt, pooled_mm, samples_mm)
+```
+## Remove metabolites that are not found in any samples
+### MQ quantified metabolites
+Remove any metabolites that are zero in every sample (not quantified)
+```{r metabolite MQ non zero}
+
+intra_MQ_z <-intra_MQ%>%
+  group_by(mtabName)%>%
+  filter(slope > 0)%>%
+  mutate(mean_mtab = mean(Concentration_ngmL,na.rm=TRUE),sdev_mtab = sd(Concentration_ngmL,na.rm=TRUE))%>%
+  filter(mean_mtab != 0, 
+         sdev_mtab != 0)%>%
+  group_by(mtabName,timepoint,type)%>%
+  mutate(quantType = "MQ")
+
+intra_MQ_z%>%
+  ungroup()%>%
+  select(mtabName)%>%
+  unique()
+
+```
+
+### MM quantified metabolites
+Remove metabolites that are zero in all samples, have negative slopes, or have no curve data reported
+```{r metabolite MM non zero}
+
+intra_MM_z <-intra_MM%>%
+  group_by(mtabName)%>%
+  filter(slope > 0)%>%
+  mutate(mean_mtab = mean(Concentration_ngmL,na.rm=TRUE),sdev_mtab = sd(Concentration_ngmL,na.rm=TRUE))%>%
+  filter(mean_mtab != 0, 
+         sdev_mtab != 0)%>%
+  group_by(mtabName,timepoint,type)%>%
+  mutate(quantType = "MM")
+
+intra_MM_z%>%
+  ungroup()%>%
+  select(mtabName)%>%
+  unique()
+
+```
+
+## Plotting raw data
+### Plot raw (non-QA/QC) metabolite data (stacked)
+
+```{r metabolite MQ raw stacked plots}
+
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MQ_plots_", today, "_bmg.pdf")
+
+# Save the plot
+#pdf(filename, width = 11, height = 8.5)
+
+# Get unique values of mtabName
+unique_names <- unique(intra_MQ_z$mtabName)
+
+# Loop through each unique mtabName
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter and plot for the current mtabName
+  p <- intra_MQ_z %>%
+    mutate(timepoint = as.numeric(timepoint))%>%
+    filter(mtabName == dynamic_title, type != "pool") %>%
+    group_by(type, timepoint) %>%
+    ggplot(aes(x = timepoint, y = Concentration_ngmL)) +
+    geom_point(size=3) +
+    geom_hline(aes(yintercept = LOD),color="red", linetype = "dashed")+
+    geom_smooth(aes(x=timepoint,y=Concentration_ngmL),
+                linewidth = 1, 
+                color = "black",
+                se = FALSE,
+                method = "gam", formula = y ~ s(x, bs = "cs")) +
+    stat_smooth(aes(x=timepoint,y=Concentration_ngmL),
+                method = "gam", formula = y ~ s(x, bs = "cs"), 
+                fill = "black",
+                alpha = .3,
+                linewidth = 1,
+                geom = "ribbon")+
+    labs(x = "timepoint", y = "Concentration (ng/mL)", title = dynamic_title) +
+    facet_wrap(~type, ncol = 1,scales="free") +
+    scale_x_continuous(breaks = seq(0, 46, by = 2))+  # Set x-axis breaks from 12 to 46
+    theme_bw(base_size = 14)
+
+  # Print the plot to the PDF
+  print(p)
+}
+
+# Close the PDF device
+dev.off()
+
+```
+
+```{r metabolite MM raw stacked plots}
+
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MM_plots_", today, "_bmg.pdf")
+
+# Save the plot
+#pdf(filename, width = 11, height = 8.5)
+
+# Get unique values of mtabName
+unique_names <- unique(intra_MM_z$mtabName)
+
+# Loop through each unique mtabName
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter and plot for the current mtabName
+  p <- intra_MM_z %>%
+    mutate(timepoint = as.numeric(timepoint))%>%
+    filter(mtabName == dynamic_title, type != "pool") %>%
+    group_by(type, timepoint) %>%
+    ggplot(aes(x = timepoint, y = Concentration_ngmL)) +
+    geom_point(size=3) +
+    geom_hline(aes(yintercept = LOD),color="red", linetype = "dashed")+
+    geom_smooth(aes(x=timepoint,y=Concentration_ngmL),
+                linewidth = 1, 
+                color = "black",
+                se = FALSE,
+                method = "gam", formula = y ~ s(x, bs = "cs")) +
+    stat_smooth(aes(x=timepoint,y=Concentration_ngmL),
+                method = "gam", formula = y ~ s(x, bs = "cs"), 
+                fill = "black",
+                alpha = .3,
+                linewidth = 1,
+                geom = "ribbon")+
+    labs(x = "timepoint", y = "Concentration (ng/mL)", title = dynamic_title) +
+    facet_wrap(~type, ncol = 1,scales="free") +
+    scale_x_continuous(breaks = seq(0, 46, by = 2))+  # Set x-axis breaks from 12 to 46
+    theme_bw(base_size = 14)
+
+  # Print the plot to the PDF
+  print(p)
+}
+
+# Close the PDF device
+dev.off()
+
+```
+
+### Plot raw (non-QA/QC) metabolite data (overlaid)
+
+```{r metabolite MQ raw overlaid plots}
+
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MQ_overlaid_plots_", today, "_bmg.pdf")
+
+# Save the plot
+#pdf(filename, width = 11, height = 8.5)
+
+# Get unique values of mtabName
+unique_names <- unique(intra_MQ_z$mtabName)
+
+# Loop through each unique mtabName
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter and plot for the current mtabName
+  p <- intra_MQ_z %>%
+    mutate(timepoint = as.numeric(timepoint))%>%
+    filter(mtabName == dynamic_title, type != "pool") %>%
+    group_by(type, timepoint) %>%
+    ggplot(aes(x = timepoint, y = Concentration_ngmL,color=type)) +
+    geom_hline(aes(yintercept = LOD),color="red", linetype = "dashed")+
+    geom_point() +
+    geom_smooth(aes(x=timepoint,y=Concentration_ngmL),
+                method = "gam", formula = y ~ s(x, bs = "cs"), se= FALSE)+
+    labs(x = "timepoint", y = "Concentration (ng/mL)", title = dynamic_title) +
+    theme_bw(base_size = 14)
+
+  # Print the plot to the PDF
+  print(p)
+}
+
+# Close the PDF device
+dev.off()
+
+```
+
+```{r metabolite MM raw overlaid plots}
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MM_overlaid_plots_", today, "_bmg.pdf")
+
+# Save the plot
+#pdf(filename, width = 11, height = 8.5)
+
+# Get unique values of mtabName
+unique_names <- unique(intra_MM_z$mtabName)
+
+# Loop through each unique mtabName
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter and plot for the current mtabName
+  p <- intra_MM_z %>%
+    mutate(timepoint = as.numeric(timepoint))%>%
+    filter(mtabName == dynamic_title, type != "pool") %>%
+    group_by(type, timepoint) %>%
+    ggplot(aes(x = timepoint, y = Concentration_ngmL,color=type)) +
+    geom_hline(aes(yintercept = LOD),color="red", linetype = "dashed")+
+    geom_point() +
+    geom_smooth(aes(x=timepoint,y=Concentration_ngmL),
+                method = "gam", formula = y ~ s(x, bs = "cs"), se=FALSE)+
+    labs(x = "timepoint", y = "Concentration (ng/mL)", title = dynamic_title) +
+    theme_bw(base_size = 14)
+
+  # Print the plot to the PDF
+  print(p)
+}
+
+# Close the PDF device
+dev.off()
+
+```
+## QA/QC 
+
+### Combine datasets into single data table
+z = zeros removed (metabolites that are zero in all samples)
+```{r combine into one}
+
+#Merge datasets together
+Intra_z <- rbind(intra_MQ_z,intra_MM_z)
+
+colnames(Intra_z)
+
+```
+### R2 filtering
+r = r-squared filtering. Curve must have an r-squared > 0.8
+```{r qaqc r2}
+
+Intra_zr <- Intra_z%>%
+  ungroup()%>%
+  filter(r2_line >= 0.8)
+
+```
+### Blank filtering
+b = blank subtraction (mean blank) by timepoint, filtering based on number above zero and/or LOD (Katie did this, using LOD). Calculated LODs for the intracellular data using the same approach 3.3x(SDintercept/slope).
+```{r qaqc blank sub}
+
+Intra_zrb <- Intra_zr %>%
+  group_by(mtabName, timepoint, quantType) %>%
+  
+  # Calculate mean_blank for blank rows only
+  mutate(mean_blank = mean(Concentration_ngmL[type == "blank"], na.rm = TRUE)) %>%
+  
+  # Subtract mean_blank from each individual sample's concentration
+  mutate(diff_sample_blank = ifelse(type == "sample", Concentration_ngmL - mean_blank, NA)) %>%
+  
+  #Extract out only the samples for the remainder of the sample filtering QC
+  filter(type == "sample")%>%
+  
+  # For each group, check if at least 2 out of 3 replicates have diff_sample_blank > 0
+  mutate(
+    # Logical condition to check if at least 2 out of 3 samples have diff_sample_blank > 0
+    condition_met = sum(diff_sample_blank > LOD, na.rm = TRUE) >= 2,
+    
+    # Adjust concentration based on the condition
+    blank_adj_concentration = ifelse(condition_met & type == "sample", diff_sample_blank, NA)
+  ) %>%
+  
+  #Replace negative values with NA
+    mutate(blank_adj_concentration = ifelse(blank_adj_concentration < LOD, NA, blank_adj_concentration))%>%
+
+  #Replace any zero values with NA for consistency downstream
+  mutate(blank_adj_concentration = na_if(blank_adj_concentration, 0))%>%
+
+  ungroup() %>%
+  select(-condition_met)  # Optionally remove the condition column
+
+```
+
+### Missingness filtering
+m = missing filtering, takeout timepoints where 2/3 are not > LOD after blank subtraction, require 10 number of timepoints
+```{r qaqc missingness}
+
+Intra_zrbm <- Intra_zrb %>%
+  # Group by mtabName, quantType, and timepoint to calculate mean
+  group_by(mtabName, quantType, timepoint) %>%
+  # Calculate the mean for each group and keep all rows
+  mutate(mean_blank_adj_concentration = ifelse(length(blank_adj_concentration[!is.na(blank_adj_concentration)]) == 0, NA,  mean(blank_adj_concentration, na.rm = TRUE)))%>%
+  # Ungroup to prepare for counting distinct timepoints
+  group_by(mtabName,quantType) %>%
+  # Calculate n_timepoints where meanRepGroup > 0
+  mutate(n_timepoints = sum(unique(timepoint[mean_blank_adj_concentration > LOD]) %in% timepoint))%>%
+  # Filter out metabolites that are not in at least 10 of the timepoints (~50% of the investigation)
+  filter(n_timepoints > 10)%>%
+  select(-mean_blank_adj_concentration)%>%
+  #Replace NAs with zeros for plotting
+  mutate(blank_adj_concentration = replace_na(blank_adj_concentration, 0))%>%
+  ungroup()
+
+```
+
+### Normalize to volume filtered
+n = normalized, samples normalized based on the culture volume filtered
+```{r volume filt. normalize}
+
+Intra_zrbm_merged <- left_join(Intra_zrbm, filt_volumes, by = c("timepoint", "replicateID"))
+
+Intra_zrbmn <- Intra_zrbm_merged%>%
+  ungroup()%>%
+  mutate(Blank_adj_concentration_ngmL_inSample = if_else(blank_adj_concentration > 0,
+   (blank_adj_concentration*2*0.05)/`Filtered weight (g)`,blank_adj_concentration))
+
+colnames(Intra_zrbmn)
+
+Intra_zrbmn%>%
+  select(mtabName,quantType,timepoint,replicateID,Sample.Type,Concentration_ngmL,
+         mean_blank,diff_sample_blank,blank_adj_concentration,`Filtered weight (g)`,Blank_adj_concentration_ngmL_inSample)%>%
+  mutate(timepoint = as.numeric(timepoint))%>%
+  filter(mtabName == "sucrose pos",quantType == "MQ",Sample.Type !="QC")%>%
+  arrange(timepoint,replicateID)%>%
+  select(-c(Sample.Type,quantType))
+
+rm(Intra_zrbm_merged)
+
+```
+
+### Duplicate metabolties
+#### Get list of duplicate metabolites
+```{r duplicate list}
+
+#Get list of all metabolites that have passed QA/QC and determine which metabolites are quantified using multiple curves, polarities, or transitions. Manually investigate which should be selected to keep moving forward.
+
+Intra_zrbmn%>%
+  select(mtabName)%>%
+  deframe()%>%
+  unique()%>%
+  sort()
+
+Intra_zrbmn_mtabs <- Intra_zrbmn%>%
+  mutate(mtab_quant = paste(mtabName,quantType))%>%
+  select(mtab_quant)%>%
+  deframe()%>%
+  unique()%>%
+  sort()
+
+view(Intra_zrbmn_mtabs)
+
+print(Intra_zrbmn_mtabs)
+
+#write.csv(Intra_zrbmn_mtabs,"Z:/Brianna/Projects/Pro_Diel/Scripts/R/r_csv_outputs/Pro11_Intra_mtabNames_postQC_needDuplicateRemoval_20250422.csv")
+
+```
+
+## Plot filtered (QC'd) metabolite data - pre duplicate removal
+### Stacked
+```{r metabolite QCd stacked plots}
+
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_VolumeNorm_mtab_stacked_plots_LODfilt_", today, "_bmg.pdf")
+
+# Save the plot
+#pdf(filename, width = 11, height = 8.5)
+
+# Get unique values of mtabName
+unique_names <- unique(Intra_zrbmn$mtabName)%>%sort()
+
+# Loop through each unique mtabName
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter and plot for the current mtabName
+  p <- Intra_zrbmn %>%
+    mutate(timepoint = as.numeric(timepoint))%>%
+    filter(mtabName == dynamic_title) %>%
+    ggplot(aes(x = timepoint, y = Blank_adj_concentration_ngmL_inSample)) +
+     geom_rect(aes(xmin = 10, 
+                 xmax = 20, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5)+
+   # Second rectangle
+  geom_rect(aes(xmin = 34, 
+                 xmax = 44, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90") +
+    geom_point(size=3) +
+    geom_smooth(aes(x=timepoint,y=Blank_adj_concentration_ngmL_inSample),
+                linewidth = 1, 
+                color = "black",
+                se = FALSE,
+                method = "gam", formula = y ~ s(x, bs = "cs")) +
+    stat_smooth(aes(x=timepoint,y=Blank_adj_concentration_ngmL_inSample),
+                method = "gam", formula = y ~ s(x, bs = "cs"), 
+                fill = "black",
+                alpha = .3,
+                linewidth = 1,
+                geom = "ribbon")+
+    #geom_hline(aes(yintercept = LOD),color="red", linetype = "dashed")+
+    labs(x = "timepoint", y = "Blank Subtracted Concentration in Sample (ng/mL)", title = dynamic_title) +
+    facet_wrap(~quantType, ncol = 1,scales="free") +
+  scale_x_continuous(breaks = seq(0, 48, by = 2)) +
+    theme_bw(base_size = 14)
+
+  # Print the plot to the PDF
+  print(p)
+}
+
+# Close the PDF device
+dev.off()
+
+```
+#### Manually remove by name
+
+```{r remove duplicate metabolites}
+
+dupList_filled <- read.csv(file = "Scripts/R/r_csv_outputs/Pro11_Intra_mtabNames_postQC_needDuplicateRemoval_20250422.csv")
+
+toRemove <- dupList_filled%>%
+  filter(goodMtab == 0)%>%
+  select(mtabName)%>%
+  deframe()
+
+Intra_zrbmnd <- Intra_zrbmn %>%
+  mutate(mtab_quant = paste(mtabName,quantType))%>%
+  filter(!mtab_quant %in% toRemove,
+         quantType == "MQ")
+
+view(Intra_zrbmnd)
+
+unique(Intra_zrbmnd$mtab_quant)
+
+```
+
+## Convert to nM
+```{r convert to nM and save}
+
+temp <- unique(Intra_zrbmnd$mtabName)
+
+colnames(MW_EE)
+
+mw_QCd <- MW_EE%>%
+  filter(SRMname %in% temp)%>%
+  select(-extEff)%>%
+  mutate(MW = case_when(SRMname %in% c("T_90to30", "T_90to62") ~ 89.0477, TRUE ~ MW))%>%
+  mutate(cleanName = case_when(SRMname %in% c("T_90to30", "T_90to62") ~ "alanine/beta-alanine/sarcosine", TRUE ~ cleanName))%>%
+  rename(mtabName = SRMname)
+
+Intra_zrbmndc <- left_join(Intra_zrbmnd,mw_QCd,by="mtabName")
+
+colnames(Intra_zrbmndc)
+
+Intra_zrbmndc <- Intra_zrbmndc%>%
+  group_by(mtabName)%>%
+  mutate(Blank_adj_concentration_inSample_nM = (Blank_adj_concentration_ngmL_inSample/MW)*1000)%>%
+  mutate(label = paste0(timepoint,replicateID))
+
+```
+
+## Normalize final QC'd dataset to cell count
+```{r normalziation}
+
+Intra_fullQC <- merge(Intra_zrbmndc,cellCounts_extrap,by = "label")
+
+colnames(Intra_fullQC)
+
+Intra_fullQC <- Intra_fullQC%>%
+  mutate(cellNorm_blank_adj_concen_inSample_agCell = ((Blank_adj_concentration_inSample_nM/cell_count)*(10^18/10^9)))
+
+```
+
+## Plot full QC'd metabolite data
+
+### Cell normalized vs. non-cell normalized 
+```{r metabolite QCd norm vs non-norm plots}
+
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_nonNorm_vs_cellNorm_mtab_stacked_plots_", today, "_bmg.pdf")
+
+# Save the plot
+#pdf(filename, width = 11, height = 8.5)
+
+# Get unique values of mtabName
+unique_names <- unique(Intra_fullQC$mtabName)
+
+# Loop through each unique mtabName
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter and plot for the current mtabName
+  p <- Intra_fullQC %>%
+    filter(mtabName == dynamic_title) %>%
+    select(timepoint.x,cellNorm_blank_adj_concen_inSample_agCell,Blank_adj_concentration_inSample_nM,cleanName)%>%
+    mutate(timepoint.x = as.numeric(timepoint.x))%>%
+    pivot_longer(c("cellNorm_blank_adj_concen_inSample_agCell","Blank_adj_concentration_inSample_nM"),names_to = "data_type", values_to = "concentration")%>%
+    ggplot(aes(x=timepoint.x,y=concentration)) +
+    geom_rect(aes(xmin = 10, 
+                 xmax = 20, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5)+
+   # Second rectangle
+  geom_rect(aes(xmin = 34, 
+                 xmax = 44, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90") +
+    geom_point(size=3, aes(fill = data_type),shape=21,color="black") +
+    geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs"), se=TRUE,color = "black")+
+    labs(x = "timepoint", y = "Concentration", title = dynamic_title)+
+    scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2))+
+    facet_wrap(~data_type,ncol=1,scales="free")+
+    theme_bw(base_size = 14)
+
+  # Print the plot to the PDF
+  print(p)
+}
+
+# Close the PDF device
+dev.off()
+
+```
+
+### Cell normalized plots only, all points
+```{r metabolite QCd norm to cell count - all points}
+
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_", today, "_bmg.pdf")
+
+# Save the plot
+#pdf(filename, width = 11, height = 8.5)
+
+# Get unique values of mtabName
+unique_names <- unique(Intra_fullQC$mtabName)
+
+# Loop through each unique mtabName
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter and plot for the current mtabName
+  p <- Intra_fullQC %>%
+    filter(mtabName == dynamic_title) %>%
+    mutate(timepoint.x = as.numeric(timepoint.x))%>%
+    ggplot(aes(x=timepoint.x,y=cellNorm_blank_adj_concen_inSample_agCell)) +
+    geom_rect(aes(xmin = 10, 
+                 xmax = 20, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5)+
+   # Second rectangle
+  geom_rect(aes(xmin = 34, 
+                 xmax = 44, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90") +
+    geom_point(size=3.5, shape=21,color="black", fill="navy") +
+    geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs"), se=TRUE,color = "black")+
+    labs(x = "timepoint", y = "attomole per cell", title = dynamic_title) +
+    scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2))+
+    theme_classic(base_size = 14)
+
+  # Print the plot to the PDF
+  print(p)
+}
+
+# Close the PDF device
+dev.off()
+
+```
+
+### Bar: Cell normalized plots only, all points, facet
+```{r metabolite QCd norm to cell count - all points, facet, bar}
+
+# Get unique metabolite names
+unique_mtabs <- unique(Intra_fullQC$mtabName)
+
+# Split into two groups
+group1_mtabs <- unique_mtabs[1:20]
+group2_mtabs <- unique_mtabs[21:37]
+
+# Step 1: Summarize data
+summary_df <- Intra_fullQC %>%
+  filter(mtabName %in% group1_mtabs) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  group_by(mtabName, timepoint.x) %>%
+  summarise(
+    mean_val = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    sd_val = sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 2: Plot
+p1 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
+  geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", inherit.aes = FALSE) +
+  geom_col(fill = "#6baed6", color = "#08519c", width = 1.5) +
+  geom_errorbar(aes(ymin = mean_val - sd_val, ymax = mean_val + sd_val), 
+                width = 0.5, color = "#08519c") +
+  labs(x = "timepoint", y = "attomole per cell") +
+  scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
+  theme_classic(base_size = 14) +
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+
+print(p1)
+
+# Second plot (21–37)
+
+# Step 1: Summarize data
+summary_df <- Intra_fullQC %>%
+  filter(mtabName %in% group2_mtabs) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  group_by(mtabName, timepoint.x) %>%
+  summarise(
+    mean_val = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    sd_val = sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 2: Plot
+p2 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
+  geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", inherit.aes = FALSE) +
+  geom_col(fill = "#6baed6", color = "#08519c", width = 1.5) +
+  geom_errorbar(aes(ymin = mean_val - sd_val, ymax = mean_val + sd_val), 
+                width = 0.5, color = "#08519c") +
+  labs(x = "timepoint", y = "attomole per cell") +
+  scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
+  theme_classic(base_size = 14) +
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+
+print(p1)
+print(p2)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_", today, "_bmg.png")
+
+#ggsave(filename,plot=p1,height=11,width=20,dpi=300)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_", today, "_bmg.png")
+
+#ggsave(filename,plot=p2,height=11,width=20,dpi=300)
+
+```
+
+### Point/smooth: Cell normalized plots only, all points, facet
+```{r metabolite QCd norm to cell count - all points, facet, point smooth}
+
+# Get unique metabolite names
+unique_mtabs <- unique(Intra_fullQC$mtabName)
+
+# Split into two groups
+group1_mtabs <- unique_mtabs[1:20]
+group2_mtabs <- unique_mtabs[21:37]
+
+# Step 1: Summarize data
+summary_df <- Intra_fullQC %>%
+  filter(mtabName %in% group1_mtabs) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  group_by(mtabName, timepoint.x) %>%
+  summarise(
+    mean_val = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    sd_val = sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 2: Plot
+p1 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
+  geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", inherit.aes = FALSE) +
+  geom_point(size=3.5, shape=21,color="black", fill="navy") +
+    geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs"), se=TRUE,color = "black")+
+  labs(x = "timepoint", y = "attomole per cell") +
+  scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
+  theme_classic(base_size = 14) +
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+
+print(p1)
+
+# Second plot (21–37)
+
+# Step 1: Summarize data
+summary_df <- Intra_fullQC %>%
+  filter(mtabName %in% group2_mtabs) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  group_by(mtabName, timepoint.x) %>%
+  summarise(
+    mean_val = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    sd_val = sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 2: Plot
+p2 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
+  geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", inherit.aes = FALSE) +
+  geom_point(size=3.5, shape=21,color="black", fill="navy") +
+    geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs"), se=TRUE,color = "black")+
+  labs(x = "timepoint", y = "attomole per cell") +
+  scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
+  theme_classic(base_size = 14) +
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+
+print(p1)
+print(p2)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_pointSmooth_", today, "_bmg.png")
+
+#ggsave(filename,plot=p1,height=11,width=20,dpi=300)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_pointSmooth_", today, "_bmg.png")
+
+#ggsave(filename,plot=p2,height=11,width=20,dpi=300)
+
+```
+
+### Cell normalized plots only, mean +/- sdev
+```{r metabolite QCd norm to cell count - all points}
+
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_meanSdev_mtab_plots_", today, "_bmg.pdf")
+
+# Save the plot
+#pdf(filename, width = 11, height = 8.5)
+
+# Get unique values of mtabName
+unique_names <- unique(Intra_fullQC$mtabName)
+
+# Loop through each unique mtabName
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter and plot for the current mtabName
+  p <- Intra_fullQC %>%
+    filter(mtabName == dynamic_title) %>%
+    mutate(timepoint.x = as.numeric(timepoint.x),
+           cellNorm_blank_adj_concen_inSample_agCell = if_else(cellNorm_blank_adj_concen_inSample_agCell == 0, NA, cellNorm_blank_adj_concen_inSample_agCell))%>%
+    group_by(mtabName,timepoint.x)%>%
+    summarise(average_conc = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+              sdev_concen =sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE)) %>%
+    ggplot(aes(x=timepoint.x,y=average_conc)) +
+    geom_rect(aes(xmin = 10, 
+                 xmax = 20, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5)+
+   # Second rectangle
+  geom_rect(aes(xmin = 34, 
+                 xmax = 44, 
+                 ymin = -Inf, ymax = Inf), 
+            fill = "gray90") +
+  geom_errorbar(aes(ymin = average_conc - sdev_concen, ymax = average_conc + sdev_concen), width = .2, 
+                position = position_dodge(0.05)) +
+  geom_point(size = 3,fill="white",shape=21) +
+    labs(x = "timepoint", y = "avg. attomole per cell +/- sdev", title = dynamic_title) +
+    scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2))+
+    theme_classic(base_size = 12)
+
+  # Print the plot to the PDF
+  print(p)
+}
+
+# Close the PDF device
+dev.off()
+
+```
+
+### Point/sdev: Cell normalized plots only, all points, facet
+```{r metabolite QCd norm to cell count - all points, facet, point sdev}
+
+# Get unique metabolite names
+unique_mtabs <- unique(Intra_fullQC$mtabName)
+
+# Split into two groups
+group1_mtabs <- unique_mtabs[1:20]
+group2_mtabs <- unique_mtabs[21:37]
+
+# Step 1: Summarize data
+summary_df <- Intra_fullQC %>%
+  filter(mtabName %in% group1_mtabs) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  group_by(mtabName, timepoint.x) %>%
+  summarise(
+    mean_val = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    sd_val = sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 2: Plot
+p1 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
+  geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", inherit.aes = FALSE) +
+  geom_errorbar(aes(ymin = mean_val - sd_val, ymax = mean_val + sd_val), width = .2, 
+                position = position_dodge(0.05)) +
+  geom_point(size = 3,fill="white",shape=21) +
+  labs(x = "timepoint", y = "attomole per cell") +
+  scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
+  theme_classic(base_size = 14) +
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+
+print(p1)
+
+# Second plot (21–37)
+
+# Step 1: Summarize data
+summary_df <- Intra_fullQC %>%
+  filter(mtabName %in% group2_mtabs) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  group_by(mtabName, timepoint.x) %>%
+  summarise(
+    mean_val = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    sd_val = sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 2: Plot
+p2 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
+  geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", inherit.aes = FALSE) +
+  geom_errorbar(aes(ymin = mean_val - sd_val, ymax = mean_val + sd_val), width = .2, 
+                position = position_dodge(0.05)) +
+  geom_point(size = 3,fill="white",shape=21) +
+  labs(x = "timepoint", y = "attomole per cell") +
+  scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
+  theme_classic(base_size = 14) +
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+
+print(p1)
+print(p2)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_pointSdev_", today, "_bmg.png")
+
+#ggsave(filename,plot=p1,height=11,width=20,dpi=300)
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_pointSdev_", today, "_bmg.png")
+
+#ggsave(filename,plot=p2,height=11,width=20,dpi=300)
+
+```
+
+### Create a heatmap of all QC'd metabolites - cell normalized 
+```{r heatmap of QC'd metabolites}
+
+df_long <- Intra_fullQC %>%
+  select(cellNorm_blank_adj_concen_inSample_agCell, label, timepoint.x, mtabName) %>%
+  group_by(mtabName, timepoint.x) %>%
+  summarise(average_conc = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE), .groups = "drop") %>%
+  arrange(mtabName) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x),
+         average_conc = if_else(average_conc == 0, NA_real_, average_conc)) %>%
+  group_by(mtabName) %>%
+  mutate(zscore_conc = as.numeric(scale(average_conc))) %>%
+  ungroup()
+
+# Identify peak timepoint for each metabolite
+peak_timepoints <- df_long %>%
+  group_by(mtabName) %>%
+  filter(zscore_conc == max(zscore_conc, na.rm = TRUE)) %>%
+  slice(1) %>%  # In case of ties, just take the first
+  ungroup() %>%
+  select(mtabName, peak_timepoint = timepoint.x)
+
+# Reorder mtabName based on peak timepoint
+df_long <- df_long %>%
+  left_join(peak_timepoints, by = "mtabName") %>%
+  mutate(mtabName = factor(mtabName, levels = unique(mtabName[order(peak_timepoint)])))
+
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_heatmap_bypeakZscore_", today, "_bmg.pdf")
+
+# Save the plot
+#pdf(filename, width = 8.5, height = 11)
+
+# Create heatmap
+fullQC_heatmap <- df_long %>%
+  arrange(timepoint.x) %>%
+  ggplot(aes(x = timepoint.x, y = mtabName)) +
+  geom_tile(color = "black", aes(fill = zscore_conc)) +
+scale_fill_gradientn(
+  colours = c("#fff7bc", "#c7e9b4", "#7fcdbb", "#41b6c4", "#084081"),  # Navy at end
+  name = "Z-score",
+  na.value = "white"
+)+
+  theme_bw(base_size = 12) +
+  theme(legend.position = "right",
+        text = element_text(colour = "black"),
+        panel.grid = element_blank()) +
+  labs(x = "Timepoint", y = "Metabolite", title = "Intracellular") +
+  scale_x_continuous(breaks = seq(0, 46, by = 2))
+
+print(fullQC_heatmap)
+
+dev.off()
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_heatmap_bypeakZscore_", today, "_bmg.png")
+
+#ggsave(filename,plot=fullQC_heatmap,height=11,width=8.5,units = "in",dpi=300)
+
+```
+
+###Plot change in concentration over time
+```{r concen change over time}
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_agCell_SequentialDifference_plot_", today, "_bmg.pdf")
+
+#pdf(filename, width = 11, height = 8.5)
+
+#Sequential
+Intra_fullQC %>%
+  select(mtabName,timepoint.x,cellNorm_blank_adj_concen_inSample_agCell)%>%
+  group_by(mtabName,timepoint.x) %>%
+  summarise(mean_concen_agCell = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE))%>%
+  mutate(timepoint.x = as.numeric(timepoint.x))%>%
+  arrange(mtabName,timepoint.x) %>%
+  mutate(delta_conc = mean_concen_agCell - lag(mean_concen_agCell)) %>%
+  ungroup()%>%
+  ggplot(aes(x = timepoint.x, y = delta_conc)) +
+  geom_line(alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1.2) +
+  labs(x = "Time (hours)", y = "Change in Concentration", title = "Change in Intracellular Metabolite Levels (Stepwise)") +
+  facet_wrap(~mtabName,scales="free")+
+  theme_minimal()
+
+dev.off()
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_agCell_T0subtracted_plot_", today, "_bmg.pdf")
+
+#pdf(filename, width = 11, height = 8.5)
+  
+  #From T0
+  Intra_fullQC %>%
+  select(mtabName, timepoint.x, cellNorm_blank_adj_concen_inSample_agCell) %>%
+  group_by(mtabName, timepoint.x) %>%
+  summarise(mean_concen_agCell = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE)) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  group_by(mtabName) %>%
+  arrange(timepoint.x, .by_group = TRUE) %>%
+  mutate(delta_from_T0 = mean_concen_agCell - first(mean_concen_agCell)) %>%
+      ungroup()%>%
+  ggplot(aes(x = timepoint.x, y = delta_from_T0)) +
+  geom_line(alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1.2) +
+  labs(x = "Time (hours)", y = "Change in Concentration", title = "Change in Intracellular Metabolite Levels (Compared to T0)") +
+  facet_wrap(~mtabName,scales="free")+
+  theme_minimal()
+  
+  dev.off()
+
+```
+
+# Rain analysis
+## Run RAIN analysis
+```{r rain}
+
+##Label is missing from this section, need to find and add back
+
+colnames(Intra_fullQC)
+
+rain_df <- Intra_fullQC%>%
+  select(mtabName,label, timepoint.x,cellNorm_blank_adj_concen_inSample_agCell)%>%
+  mutate(timepoint.x = as.numeric(timepoint.x))%>%
+  arrange(timepoint.x)%>%
+  select(-timepoint.x)%>%
+  pivot_wider(names_from = mtabName, values_from = cellNorm_blank_adj_concen_inSample_agCell)
+
+rain.mat <- as.matrix(rain_df[,2:ncol(rain_df)])
+
+rain.mat[is.na(rain.mat)] <- 0
+
+rownames(rain.mat) <- as.matrix(rain_df[,1])
+
+str(rain.mat)
+
+set.seed(123)
+
+rain_24 <- rain(rain.mat, period = 24, deltat = 2, method = "longitudinal", nr.series = 3, verbose = TRUE)
+
+rain_24 <- rownames_to_column(rain_24, var = "mtabName")
+
+```
+
+###Create a simplied table with metabolites trends extracted from RAIN
+```{r trend table}
+
+colnames(rain_24)
+
+rain_24 <- rain_24%>%
+  rename(rain_pVal = pVal,
+         rain_phase = phase,
+         rain_peak.shape = peak.shape,
+         rain_period = period)
+
+colnames(Intra_fullQC)
+
+x <- Intra_fullQC%>%
+  select(Sample.Name,
+         replicateID.x,
+         label,
+         timepoint.x,
+         date_time,
+         mtabName,
+         quantType,
+         mtab_quant,
+         r2_line,
+         n_timepoints,
+         Concentration_ngmL,
+         mean_blank,
+         blank_adj_concentration,
+         Blank_adj_concentration_ngmL_inSample,
+         cellNorm_blank_adj_concen_inSample_agCell)
+
+df_w_mtab_trends <- left_join(x,rain_24,by = )
+
+df_w_mtab_trends<- df_w_mtab_trends%>%
+  mutate(isRAINsig = ifelse(rain_pVal < 0.05, 1, 0))
+
+rm(x)
+
+sig24_mtabNames <- df_w_mtab_trends %>%
+  filter(isRAINsig == 1) %>%
+  distinct(mtabName, .keep_all = TRUE)%>%
+  select(mtabName)%>%
+  deframe()
+
+```
+
+## Run a linear regression to determine which metabolites show a significant linear relationship over time.
+```{r identifying significantly linear metabs}
+
+set.seed(123)
+
+df_w_mtab_trends <- df_w_mtab_trends %>%
+  ungroup() %>%
+  group_by(mtabName) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  mutate(
+    LR_pVal = summary(lm(cellNorm_blank_adj_concen_inSample_agCell ~ timepoint.x))$coefficients["timepoint.x", "Pr(>|t|)"],
+    LR_rSquared = summary(lm(cellNorm_blank_adj_concen_inSample_agCell ~ timepoint.x))$r.squared,
+    LR_slope = summary(lm(cellNorm_blank_adj_concen_inSample_agCell ~ timepoint.x))$coefficients["timepoint.x", "Estimate"]
+  ) %>%
+  ungroup() %>%
+  mutate(isLRsig = ifelse(LR_pVal < 0.05, 1, 0))
+
+sigLR_mtabNames <- df_w_mtab_trends %>%
+  filter(isLRsig == 1) %>%
+  distinct(mtabName, .keep_all = TRUE) %>%
+  select(mtabName) %>%
+  deframe()
+
+```
+
+## Write temporal stats test to csv file
+```{r Write temporal analysis results to table}
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/r_csv_outputs/Pro11_Intra_withQC_cellNorm_mtabTable_wTemporalAnalysis_", today, "_bmg.csv")
+
+#write.csv(df_w_mtab_trends,filename)
+
+```
+
+## Plot significant temporal metabolites
+```{r plot significant RAIN MQ quant metabolites}
+
+# Create a PDF to save all plots
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_rainSig24_LRsig_plots_", today, "_bmg.pdf")
+
+#pdf(filename, width = 11, height = 8.5)
+
+# Get unique values of mtabName
+unique_names <- df_w_mtab_trends%>%
+  filter(isRAINsig == 1 | isLRsig == 1)%>%
+  select(mtabName)%>%
+  unique()%>%
+  deframe()
+
+# Split into two groups
+group1_mtabs <- unique_names[1:14]
+group2_mtabs <- unique_names[15:28] 
+
+# Loop through each unique mtabName
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter and plot for the current mtabName
+p <- df_w_mtab_trends %>%
+  #filter(mtabName %in% group2_mtabs)%>%
+  mutate(colorCode = case_when(
+    isLRsig == 1 & isRAINsig == 0 ~ "#1f78b4",  # blue
+    isLRsig == 0 & isRAINsig == 1 ~ "#ff7f00",  # orange
+    isLRsig == 1 & isRAINsig == 1 ~ "#6a3d9a",  # purple
+    TRUE ~ NA_character_
+  )) %>%
+  filter(mtabName == dynamic_title) %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  ggplot(aes(x = timepoint.x, y = cellNorm_blank_adj_concen_inSample_agCell)) +
+
+  # Rectangles
+  geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf),
+            fill = "gray90", alpha = 0.5) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf),
+            fill = "gray90") +
+
+  # Points
+  geom_point(size = 3, aes(color = colorCode)) +
+
+  # Smooth lines
+  geom_smooth(linewidth = 1, color = "black", se = FALSE,
+              method = "gam", formula = y ~ s(x, bs = "cs")) +
+  stat_smooth(method = "gam", formula = y ~ s(x, bs = "cs"),
+              colour = "black", linewidth = 1, geom = "ribbon",
+              linetype = "dashed", fill = NA) +
+
+  # Axes and theme
+  labs(x = "timepoint", y = "attomole per cell", 
+       title = dynamic_title,
+       subtitle = "Blue = sig. LR; Orange = sig. RAIN; Purple = sig. both") +
+  scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
+  scale_color_identity() +
+  theme_classic(base_size = 14)
+  #+facet_wrap(~mtabName,scales="free",ncol=5)
+
+
+  # Print the plot to the PDF
+  print(p)
+}
+
+# Close the PDF device
+dev.off()
+
+```
+
+## Create a heatmap of significant temporal metabolites
+
+### All
+```{r heatmap of significant diel metabolites}
+
+#Create a dataframe in a wide format with the median concentration of each metabolite by Site. 
+df_long<-df_w_mtab_trends%>%
+  filter(isRAINsig == 1 | isLRsig == 1)%>%
+  select(cellNorm_blank_adj_concen_inSample_agCell,label,timepoint.x,mtabName)%>%
+  group_by(mtabName,timepoint.x)%>%
+  summarise(average_conc = mean(cellNorm_blank_adj_concen_inSample_agCell,na.rm=TRUE))%>%
+  arrange(mtabName)%>%
+  mutate(timepoint = as.numeric(timepoint.x))
+
+df_long$average_conc[df_long$average_conc == 0] <- NA
+
+# Step 1: Prepare wide format for clustering
+df_zmat <- df_long %>%
+  mutate(zscore_conc = scale(average_conc)) %>%
+  select(mtabName, timepoint.x, zscore_conc) %>%
+  pivot_wider(names_from = timepoint.x, values_from = zscore_conc)
+
+# Step 2: Create a matrix and perform clustering
+zmat <- df_zmat %>% select(-mtabName) %>% as.matrix()
+rownames(zmat) <- df_zmat$mtabName
+
+# Remove rows with all NA (to avoid clustering issues)
+zmat <- zmat[rowSums(is.na(zmat)) < ncol(zmat), ]
+
+# Use Euclidean distance and complete linkage
+row_dist <- dist(zmat, method = "euclidean")
+row_clust <- hclust(row_dist, method = "complete")
+
+# Step 3: Reorder factor levels of mtabName based on clustering
+ordered_names <- rownames(zmat)[row_clust$order]
+df_long <- df_long %>%
+  filter(mtabName %in% ordered_names) %>%  # Ensure matching set
+  mutate(mtabName = factor(mtabName, levels = ordered_names))
+
+# Step 4: Plot heatmap with clustered y-axis
+mtab_heatmap <- df_long %>%
+  mutate(zscore_conc = scale(average_conc)) %>%
+  ggplot(aes(x = timepoint.x, y = mtabName)) +
+  geom_tile(color = "black", aes(fill = zscore_conc)) +
+  scale_fill_viridis(na.value = "white", direction = 1,
+                     "Z-scored\nConcentration (ag/cell)") + 
+  theme_bw(base_size = 14) +
+  theme(legend.position = "top", text = element_text(color = "black"),
+        legend.text = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Timepoint", y = "Metabolite") +
+  scale_x_continuous(breaks = seq(0, 46, by = 2))
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_Intra_cellNorm_temporalSig_", today, "_bmg.pdf")
+
+#pdf(filename, width = 11, height = 8.5)
+
+print(mtab_heatmap)
+
+dev.off()
+
+```
+
+### In all 24 timepoints (ntimepoint = 24)
+```{r heatmap of significant diel metabolites}
+
+#Create a dataframe in a wide format with the median concentration of each metabolite by Site. 
+df_long<-df_w_mtab_trends%>%
+  filter(isRAINsig == 1 | isLRsig == 1)%>%
+  filter(n_timepoints == 24)%>%
+  select(cellNorm_blank_adj_concen_inSample_agCell,label,timepoint.x,mtabName)%>%
+  group_by(mtabName,timepoint.x)%>%
+  summarise(average_conc = mean(cellNorm_blank_adj_concen_inSample_agCell,na.rm=TRUE))%>%
+  arrange(mtabName)%>%
+  mutate(timepoint = as.numeric(timepoint.x))
+
+df_long$average_conc[df_long$average_conc == 0] <- NA
+
+# Step 1: Prepare wide format for clustering
+df_zmat <- df_long %>%
+  mutate(zscore_conc = scale(average_conc)) %>%
+  select(mtabName, timepoint.x, zscore_conc) %>%
+  pivot_wider(names_from = timepoint.x, values_from = zscore_conc)
+
+# Step 2: Create a matrix and perform clustering
+zmat <- df_zmat %>% select(-mtabName) %>% as.matrix()
+rownames(zmat) <- df_zmat$mtabName
+
+# Remove rows with all NA (to avoid clustering issues)
+zmat <- zmat[rowSums(is.na(zmat)) < ncol(zmat), ]
+
+# Use Euclidean distance and complete linkage
+row_dist <- dist(zmat, method = "euclidean")
+row_clust <- hclust(row_dist, method = "complete")
+
+# Step 3: Reorder factor levels of mtabName based on clustering
+ordered_names <- rownames(zmat)[row_clust$order]
+df_long <- df_long %>%
+  filter(mtabName %in% ordered_names) %>%  # Ensure matching set
+  mutate(mtabName = factor(mtabName, levels = ordered_names))
+
+# Step 4: Plot heatmap with clustered y-axis
+mtab_heatmap <- df_long %>%
+  mutate(zscore_conc = scale(average_conc)) %>%
+  ggplot(aes(x = timepoint.x, y = mtabName)) +
+  geom_tile(color = "black", aes(fill = zscore_conc)) +
+  scale_fill_viridis(na.value = "white", direction = 1,
+                     "Z-scored\nConcentration (ag/cell)") + 
+  theme_bw(base_size = 14) +
+  theme(legend.position = "top", text = element_text(color = "black"),
+        legend.text = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Timepoint", y = "Metabolite") +
+  scale_x_continuous(breaks = seq(0, 46, by = 2))
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_Intra_cellNorm_temporalSig_allTimepoints_", today, "_bmg.pdf")
+
+#pdf(filename, width = 11, height = 8.5)
+
+print(mtab_heatmap)
+
+dev.off()
+
+```
+# Look at metabolite variability as a function of cell cycle
+## Calculations
+```{r metabolite variability calculations}
+
+metab_rsd <- Intra_fullQC %>%
+  mutate(cellNorm_blank_adj_concen_inSample_agCell = if_else(cellNorm_blank_adj_concen_inSample_agCell == 0, NA, cellNorm_blank_adj_concen_inSample_agCell))%>%
+    mutate(timepoint.x = as.numeric(timepoint.x))%>%
+    filter(timepoint.x >=12)%>%
+  group_by(timepoint.x, mtabName) %>%
+  summarize(
+    mean_val = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    sd_val = sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    rsd = sd_val / mean_val * 100)%>%
+  rename(timepoint = timepoint.x)
+
+cell_stability <- allCellInfo %>%
+  ungroup()%>%
+  select(timepoint,label,G1,G2,S)%>%
+  mutate(timepoint = as.numeric(timepoint))%>%
+  filter(!is.na(G1))%>%
+  rowwise() %>%
+  mutate(
+    entropy = entropy.empirical(c(G1, S, G2) / 100))%>%
+  group_by(timepoint)%>%
+  mutate(avg_entropy = mean(entropy))
+
+metab_with_stability <- metab_rsd %>%
+  left_join(cell_stability, by = "timepoint")
+
+```
+
+## Plotting all 
+```{r metabolite variability plotting - all, warning=FALSE}
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtabRSD_vs_cellCycleEntropy_", today, "_bmg.pdf")
+
+#pdf(filename, width = 11, height = 8.5)
+
+unique_names <- unique(metab_with_stability$mtabName)
+
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Filter data for the current mtabName
+  df_subset <- metab_with_stability %>%
+    filter(mtabName == dynamic_title)
+
+  # Fit linear model
+  lm_model <- lm(rsd ~ entropy, data = df_subset)
+  model_summary <- summary(lm_model)
+  r2_val <- model_summary$r.squared
+  p_val <- model_summary$coefficients[2, 4]  # p-value for avg_entropy coefficient
+
+  # Create plot with R² and p-value as subtitle
+  p <- ggplot(df_subset, aes(x = entropy, y = rsd)) +
+    geom_smooth(method = "lm", se = TRUE, color = "black") +
+    geom_point(size = 3, shape = 21, color = "black", fill = "white") +
+    labs(
+      x = "Cell cycle entropy",
+      y = "Metabolite RSD (%)",
+      title = dynamic_title,
+      subtitle = paste0("R² = ", round(r2_val, 3), 
+                        ", p = ", formatC(p_val, format = "e", digits = 2))
+    ) +
+    theme_minimal()
+
+  print(p)
+}
+
+dev.off()
+
+
+```
+
+## Plotting significant linear relationships
+```{r metabolite variability plotting - sig lm, warning=FALSE}
+
+# Step 1: Fit models and store results
+lm_nested <- metab_with_stability %>%
+  group_by(mtabName) %>%
+  nest() %>%
+  mutate(
+    model = map(data, ~ lm(rsd ~ entropy, data = .x)),
+    tidied = map(model, tidy),
+    glanced = map(model, glance)
+  )
+
+# Step 2: Extract slope, p-value, and R²
+lm_results <- lm_nested %>%
+  unnest(tidied) %>%
+  filter(term == "entropy") %>%
+  left_join(
+    lm_nested %>%
+      unnest(glanced) %>%
+      select(mtabName, r.squared),
+    by = "mtabName"
+  ) %>%
+  select(mtabName, estimate, p.value, r.squared) %>%
+  rename(slope = estimate) %>%
+  mutate(isSig = p.value < 0.05)
+
+# Keep only significant mtabNames
+unique_names <- lm_results %>%
+  filter(isSig == TRUE) %>%
+  select(mtabName) %>%
+  deframe()
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtabRSD_vs_cellCycleEntropy_sig05_", today, "_bmg.pdf")
+
+#pdf(filename, width = 11, height = 8.5)
+
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+  # Get the r2 and p-value for this mtabName
+  r2_val <- lm_results$r.squared[lm_results$mtabName == dynamic_title]
+  p_val <- lm_results$p.value[lm_results$mtabName == dynamic_title]
+
+  # Filter and plot for the current mtabName
+  p <- metab_with_stability %>%
+    filter(mtabName == dynamic_title) %>%
+    ggplot(aes(x = entropy, y = rsd)) +
+    geom_smooth(method = "lm", se = TRUE, color = "black") +
+    geom_point(size = 3, shape = 21, color = "black", fill = "white") +
+    labs(
+      x = "Cell cycle entropy",
+      y = "Metabolite RSD (%)",
+      title = dynamic_title,
+      subtitle = paste0("R² = ", round(r2_val, 3), 
+                        ", p = ", formatC(p_val, format = "e", digits = 2))
+    ) +
+    theme_minimal()
+
+  print(p)
+}
+
+dev.off()
+
+
+```
+
+## Plotting RSD over time for each metabolite
+```{r metabolite variability plotting - all, warning=FALSE}
+
+scale_factor <- max(Intra_fullQC$cell_count_mean, na.rm = TRUE) / 150  # 200 = max RSD y-axis
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_Intra_QCd_Mtab_RSD_overTime_", today, "_bmg.pdf")
+
+#pdf(filename, width = 11, height = 8.5)
+
+unique_names <- unique(Intra_fullQC$mtabName)
+
+for (i in seq_along(unique_names)) {
+  dynamic_title <- unique_names[i]  # Current title based on mtabName
+
+# Filter and plot for the current mtabName
+p <- Intra_fullQC %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  group_by(mtabName, timepoint.x) %>%
+  mutate(
+    mean_val = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    sd_val = sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    rsd = sd_val / mean_val * 100,
+    .groups = "drop"
+  ) %>%
+  filter(mtabName == dynamic_title) %>%
+  ggplot(aes(x = timepoint.x)) +
+  geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf),
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf),
+            fill = "gray90", inherit.aes = FALSE) +
+  geom_col(aes(y = rsd), fill = "navy") +
+  geom_line(aes(y = cell_count_mean / scale_factor), color = "orange", size = 1) +  # scaled line
+  scale_y_continuous(
+    name = "RSD (%)",
+    sec.axis = sec_axis(~ . * scale_factor, name = "Cell Count")
+  ) +
+  labs(x = "Timepoint", title = dynamic_title) +
+  scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
+  theme_classic(base_size = 14)
+
+print(p)
+
+}
+
+dev.off()
+
+```
+
+# Stacked bar chart as a function of cell cycle stage 
+## Calculations
+```{r stacked bar for cell cycl}
+
+dom_cellCycle <- allCellInfo %>%
+  ungroup() %>%
+  select(timepoint, label, G1, G2, S) %>%
+  mutate(timepoint = as.numeric(timepoint)) %>%
+  filter(!is.na(G1)) %>%
+  rowwise() %>%
+  mutate(
+    domCellCycle = c("G1", "S", "G2")[which.max(c(G1, S, G2))]
+  ) %>%
+  ungroup()
+
+temp_mtab <- Intra_fullQC %>%
+  ungroup() %>%
+  mutate(timepoint.x = as.numeric(timepoint.x)) %>%
+  filter(timepoint.x >= 12) %>%
+  select(mtabName, timepoint.x, cellNorm_blank_adj_concen_inSample_agCell) %>%
+  group_by(mtabName, timepoint.x) %>%
+  mutate(cellNorm_blank_adj_concen_inSample_agCell = if_else(cellNorm_blank_adj_concen_inSample_agCell == 0, NA, cellNorm_blank_adj_concen_inSample_agCell))%>%
+  summarise(avg_concen = mean(cellNorm_blank_adj_concen_inSample_agCell,na.rm = TRUE), .groups = "drop")%>%
+  rename(timepoint = timepoint.x)
+
+dom_cellCycle <- dom_cellCycle %>%
+  left_join(temp_mtab, by = "timepoint")%>%
+  mutate(domCellCycle = factor(domCellCycle, levels = c("G1", "S", "G2")))
+
+n_timepoints_df <- dom_cellCycle %>%
+  ungroup() %>%
+  select(domCellCycle, timepoint) %>%
+  distinct() %>%
+  group_by(domCellCycle) %>%
+  summarise(n_timepoints = n_distinct(timepoint), .groups = "drop")
+
+dom_cellCycle <- dom_cellCycle%>%
+  group_by(domCellCycle,mtabName)%>%
+  summarise(avg_concen_stage = mean(avg_concen, na.rm = TRUE))
+
+dom_cellCycle_scaled <- dom_cellCycle %>%
+  ungroup()%>%
+  group_by(domCellCycle) %>%
+  mutate(
+    mole_fraction = avg_concen_stage / sum(avg_concen_stage, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+```
+
+## Plotting
+
+```{r color palette for all metabolits}
+
+# After you have your 37 metabolite names in order:
+# Assume you have a character vector of metabolite names:
+metabolite_names <- unique(dom_cellCycle_scaled$mtabName)  # or wherever your 37 names are
+
+# Make sure the order matches exactly!
+palette_37 <- createPalette(37, seedcolors = c("#ff0000", "#00ff00", "#0000ff"))
+
+# Attach names
+names(palette_37) <- metabolite_names
+
+```
+
+```{r stacked bar chart plotting cell cycle}
+
+bar_tops <- dom_cellCycle %>%
+  group_by(domCellCycle) %>%
+  summarise(ymax = sum(avg_concen_stage, na.rm = TRUE), .groups = "drop")
+
+label_df <- left_join(bar_tops, n_timepoints_df, by = "domCellCycle")
+
+# Generate the filename with the date automatically included
+#filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_stackedBar_cellCyle_", today, "_bmg.pdf")
+
+#pdf(filename, width = 8.5, height = 11)
+
+stackedBar_cellCycle <- dom_cellCycle %>%
+  ggplot(aes(x = domCellCycle, y = avg_concen_stage, fill = mtabName)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = palette_37) +
+  labs(x = "Dominant Cell Cycle Stage",
+       y = "Avg. attomole per cell",
+       fill = "Metabolite",
+       title = "Intracellular metabolite concentrations") +
+  theme_bw() +
+  geom_text(data = label_df,
+            aes(x = domCellCycle, y = ymax, label = paste0("n=", n_timepoints)),
+            vjust = -0.5,
+            inherit.aes = FALSE)
+
+print(stackedBar_cellCycle)
+
+dev.off()
+
+```
+
+## Plotting - relative abundance
+```{r stacked bar chart plotting cell cycle}
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_stackedBar_moleFraction_cellCyle_", today, "_bmg.pdf")
+
+#pdf(filename, width = 8.5, height = 11)
+
+stackedBar_cellCycle_rel <- dom_cellCycle_scaled %>%
+    mutate(abundance_level = if_else(mole_fraction >= 0.01, "dominant", "rare")) %>%
+  ggplot(aes(x = domCellCycle, y = mole_fraction, fill = mtabName)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = palette_37)+
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Dominant Cell Cycle Stage",
+       y = "Relative abundance",
+       fill = "Metabolite",
+       title = "Intracellular metabolite mole fractions",
+       subtitle = "Dominant >= 1%") +
+  facet_wrap(~abundance_level, scales = "free") +
+  theme_bw()
+
+print(stackedBar_cellCycle_rel)
+
+dev.off()
+
+```
+
+## Treemap 
+```{r treemap_plot}
+
+# Generate the filename with the date automatically included
+filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_treeMap_moleFraction_cellCyle_", today, "_bmg.pdf")
+
+#pdf(filename, width = 11, height = 8.5)
+
+domCellCycle_treemap <- dom_cellCycle_scaled %>%
+  mutate(abundance_level = if_else(mole_fraction >= 0.01, "dominant", "rare")) %>%
+  ggplot(aes(area = mole_fraction, fill = mtabName, label = mtabName)) +
+  geom_treemap() +
+  geom_treemap_text(fontface = "italic", color = "white", place = "centre") +
+  theme_classic()+
+  scale_fill_manual(values = palette_37)+
+  facet_wrap(~domCellCycle + abundance_level, scales = "free_y",
+             ncol = 2, nrow=3)+
+  labs(title = "Mole Fraction by Dominate Cell Cycle Stage")
+
+
+print(domCellCycle_treemap)
+
+```
+
+# Save full QC quant table
+```{r save mtabs quant table}
+
+colnames(Intra_fullQC)
+
+#Blank adjusted, volume normalized, normalized to cell count - agCell
+Intra_fullQC%>%
+  select(label,cleanName,MW,r2_line,nPoints,LOD,LOQ,quantType,n_timepoints,cellNorm_blank_adj_concen_inSample_agCell,timepoint.x)%>%
+  mutate(timepoint.x = as.numeric(timepoint.x))%>%
+  arrange(cleanName,timepoint.x)%>%
+  select(-timepoint.x)%>%
+  pivot_wider(names_from = label, values_from=cellNorm_blank_adj_concen_inSample_agCell)
+#%>%write.csv("Scripts/R/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_agCell_wCurveInfo.csv")
+
+#Blank adjusted, volume normalized - nM
+Intra_fullQC%>%
+  select(label,cleanName,MW,r2_line,nPoints,LOD,LOQ,quantType,n_timepoints,Blank_adj_concentration_inSample_nM,timepoint.x)%>%
+  mutate(timepoint.x = as.numeric(timepoint.x))%>%
+  arrange(cleanName,timepoint.x)%>%
+  select(-timepoint.x)%>%
+  pivot_wider(names_from = label, values_from=Blank_adj_concentration_inSample_nM)
+#%>%write.csv("Scripts/R/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_nM_wCurveInfo.csv")
+
+#Average cell normalized concentration (agCell) per timepoint
+Intra_fullQC%>%
+  select(mtabName,quantType,timepoint.x,cellNorm_blank_adj_concen_inSample_agCell)%>%
+  group_by(mtabName,quantType,timepoint.x)%>%
+  summarise(mean_agCell = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE))%>%
+  ungroup()%>%
+  mutate(timepoint.x = as.numeric(timepoint.x))%>%
+  rename(timepoint=timepoint.x)%>%
+  mutate(Molecule.Name = paste(mtabName,quantType))%>%
+  select(-c(mtabName,quantType))%>%
+  arrange(Molecule.Name,timepoint)%>%
+  pivot_wider(names_from = timepoint, values_from = mean_agCell )
+#%>%write.csv(x = simple_output, file = "Scripts/R/r_csv_outputs/PD22_Pro11_Intra_fullQC_quantTable_meanConcentration_agCell_byTime.csv")
+
+```
+
+# Load in dilution data 
+```{r dilution data - load}
+
+#DF10X
+df10x_quantTable <- read.csv('/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/20250508_DF10x/Pro11_RP_filters_Altis_DF10x)_MQ_mtabTable.2025.05.10.csv',
+                             check.names = FALSE) 
+
+df10x_curveInfo <-read.csv('/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/20250508_DF10x/Pro11_RP_filters_Altis_DF10x)_MQ_curveInfo.2025.05.10.csv',
+                           check.names = FALSE)
+
+df10x_quantTable <- df10x_quantTable[1:7,]
+df10x_curveInfo <- df10x_curveInfo[1:7,]
+
+df10x_df <- merge(df10x_curveInfo,df10x_quantTable,
+                  by.x = "mtabName",
+                  by.y = "SRMname")
+
+rm(df10x_quantTable,df10x_curveInfo)
+
+#DF500X
+
+```
+
+

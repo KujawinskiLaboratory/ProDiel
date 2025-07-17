@@ -53,9 +53,8 @@ library(broom)
 library(patchwork)
 
 ```
-# Filter volumes 
-Filter volumes represent the amount (volume) of culture liquid that was filtered and thus biological material collected on the filter and extracted for metabolite concentrations. Value outputs from riMAVEN represent the ng/mL concentrations in the LC-MS vial, and need to be converted to represent the concentration in the full filtered volume.
-## Load Data
+
+# Load Data
 ```{r load filter volumes}
 
 filt_volumes <- read_csv(file = "Metadata/ProchlorococcusExperiments(Pro11 RP PPL and DOC) modfied for R.csv")
@@ -70,8 +69,8 @@ str(filt_volumes)
 
 ```
 
-# Prochlorococcus Cell Growth and Culturing Data 
-## Load Data Files 
+## Prochlorococcus Cell Growth and Culturing Data 
+### Load Data Files 
 ```{r Culturing data load, warning=FALSE, message = FALSE}
 
 allCellInfo <- read_xlsx('Documents/fromMIT/MIT9301 ProDOM diel all cell info_updated20231201.xlsx', skip=3)%>%
@@ -132,8 +131,8 @@ cellCounts_extrap <- cellCounts_extrap%>%
 
 
 ```
-## Plot cell culture data
-### Plot - Cell Counts
+### Plot cell culture data
+#### Plot - Cell Counts
 ```{r cell counts, warning=FALSE}
 
 #Plot the average cell count +/- standard deviation
@@ -168,14 +167,14 @@ cellCounts_time_plot <- cellCounts_time %>%
 print(cellCounts_time_plot)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_pro11_cellCounts_extToZero_300dpi_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_cellCounts_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
 #ggsave(filename, plot = cellCounts_time_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 
-### Plot - Cell Counts (Extrapolated)
+#### Plot - Cell Counts (Extrapolated)
 ```{r cell counts extrap plot}
 
 cellCounts_extrap_plot <- cellCounts_extrap %>%
@@ -206,14 +205,14 @@ scale_fill_manual(values = c(
 print(cellCounts_extrap_plot)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_pro11_cellCounts_extrapolatedToZero_300dpi_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_cellCounts_extrapolatedToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
 #ggsave(filename, plot = cellCounts_extrap_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 
-### Plot - Cell Cycle
+#### Plot - Cell Cycle
 ```{r cell cycle, warning=FALSE}
 
 cellCycle_time <- allCellInfo%>%
@@ -249,7 +248,7 @@ cellCycle_time_plot <- cellCycle_time %>%
 print(cellCycle_time_plot)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_pro11_cellCycle_extToZero_300dpi_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_cellCycle_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
 #ggsave(filename, plot = cellCycle_time_plot, width = 11, height = 8.5, dpi = 300)
@@ -257,7 +256,7 @@ filename <- paste0("Scripts/R/figures/PD22_pro11_cellCycle_extToZero_300dpi_", t
 
 
 ```
-### Plot - Light intensity
+#### Plot - Light intensity
 ```{r light, warning=FALSE}
 
 light_time <- allCellInfo%>% 
@@ -277,14 +276,14 @@ light_time_plot <- light_time%>%
 light_time_plot
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_pro11_lightLevels_extToZero_300dpi_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_lightLevels_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
 #ggsave(filename, plot = light_time_plot, width = 11, height = 8.5, dpi = 300)
 
 
 ```
-### Plot - Forward Angle Light Scatter (FALS)
+#### Plot - Forward Angle Light Scatter (FALS)
 ```{r FALS, warning=FALSE}
 
 FALS_time <- allCellInfo%>%
@@ -316,13 +315,13 @@ FALS_time_plot <- FALS_time%>%
 print(FALS_time_plot)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_pro11_FALS_extToZero_300dpi_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_FALS_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
 #ggsave(filename, plot = FALS_time_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
-### Plot - Chlorophyll concentration per cell
+#### Plot - Chlorophyll concentration per cell
 ```{r Chl, warning=FALSE}
 
 Chl_time <- allCellInfo%>%
@@ -354,13 +353,13 @@ Chl_time_plot <- Chl_time%>%
 print(Chl_time_plot)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_pro11_ChlCell_extToZero_300dpi_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_ChlCell_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
 #ggsave(filename, plot = Chl_time_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
-### Combined plots from above
+#### Combined plots from above
 ```{r cellCount and FALS plot, warning=TRUE}
 
 cellCount_FALS <- allCellInfo %>% 
@@ -403,13 +402,14 @@ cellCount_FALS_plot <- cellCount_FALS%>%
 cellCount_FALS_plot
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_pro11_CellCount_FALS_extToZero_300dpi_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_CellCount_FALS_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
 #ggsave(filename, plot = cellCount_FALS_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 
+#### Combined cell plot data with shared axis
 ```{r combined cell data plot, warning=FALSE}
 
 # Combine plots with shared x-axis
@@ -426,27 +426,38 @@ combinedCellData_plot <- plot_grid(
 combinedCellData_plot
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_pro11_combinedCellData_extToZero_300dpi_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_combinedCellData_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
 #ggsave(filename, plot = combinedCellData_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
-# Intracellular Metabolite Quantification
-## Load Data Files
+## Intracellular Metabolite Quantification
+
+### Load Data Files
+
+#### Sequence Sheets
 ```{r load metabolite data}
 
-#Load sequence sheet
+intra_original_seq <- read.csv("Altis/2023_0718_Pro11 RP Diel rerun/sequence_fromMethods/mtab_Pro11_RP_Diel_Altis_071823_rerun_forElMaven.csv")
 
-intra_seq <- read.csv("Altis/2023_0718_Pro11 RP Diel rerun/sequence_fromMethods/mtab_Pro11_RP_Diel_Altis_071823_rerun_forElMaven.csv")
+intra_DF10x_seq <- read.csv("Altis/2023_1009 Pro11 RP diel dilution10X rerun/sequence_fromMethods/mtab_Pro11_RP_Diel_Dilution10X_Rerun_Altis_100923_forElMAVEN.csv")
 
-#Load data quantified with the Mili-Q (MQ) generated standard curve
+intra_DF500x_seq <- read.csv("Altis/2023_1011_Pro11 RP diel dilution 500X/sequence_fromMethods/mtab_Pro11_RP_Diel_Dilution500X_Altis_101123_forMAVEN.csv")
+
+```
+#### Quantification tables
+##### Load data quantified with the Mili-Q (MQ) generated standard curve - original
+```{r load MQ quant and curve - original}
 
 intra_mq_quant <- read.csv("riMAVEN15/Pro11_RP_Filters_Original/Pro11_RP_filters_Original_MQ_mtabTable.2025.05.10.csv",check.names = FALSE)
 
 intra_mq_curve <- read.csv("riMAVEN15/Pro11_RP_Filters_Original/Pro11_RP_filters_Original_MQ_curveInfo.2025.05.10.csv",check.names = FALSE)
 
-#Load data quantified with the Matrix-Matched (MM) generated standard curve
+```
+
+##### Load data quantified with the Matrix-Matched (MM) generated standard curve - original
+```{r load MM quant and curve - original}
 
 intra_mm_quant <- read.csv("riMAVEN15/Pro11_RP_Filters_Original/Pro11_RP_filters_Original_matrix_mtabTable.2025.05.10.csv",check.names = FALSE)
 
@@ -454,11 +465,48 @@ intra_mm_curve <- read.csv("riMAVEN15/Pro11_RP_Filters_Original/Pro11_RP_filters
 
 ```
 
-## Transpose quant table format of each quant table
-For some reason metabolites were exported as columns, want metabolites as rows and samples as columns
-```{r long quant}
+##### Load data quantified with the Mili-Q (MQ) generated standard curve - DF 10x
+```{r load MQ quant and curve - DF10x}
 
-#MM
+intra_mq_DF10x_quant <- read.csv("/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/Pro11_DF10x/Pro11_RP_filters_Altis_DF10x_MQ_mtabTable.2025.07.17.csv",check.names = FALSE)
+
+intra_mq_DF10x_curve <- read.csv("/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/Pro11_DF10x/Pro11_RP_filters_Altis_DF10x_MQ_curveInfo.2025.07.17.csv",check.names = FALSE)
+
+```
+
+##### Load data quantified with the Mili-Q (MQ) generated standard curve - DF 500x
+```{r load MQ quant and curve - DF500x}
+
+intra_mq_DF500x_quant <- read.csv("/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/Pro11_DF500x/Pro11_RP_filters_Altis_DF500x_MQ_mtabTable.2025.07.17.csv",check.names = FALSE)
+
+intra_mq_DF500x_curve <- read.csv("/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/Pro11_DF500x/Pro11_RP_filters_Altis_DF500x_MQ_curveInfo.2025.07.17.csv",check.names = FALSE)
+
+```
+
+#### Transpose quant table format of each quant table
+For some reason metabolites were exported as columns, want metabolites as rows and samples as columns
+##### MQ - original
+```{r long quant MQ - original}
+
+colnames(intra_mq_quant)
+
+EE_MW_mq <- intra_mq_quant%>%
+  select(SRMname,cleanName,MW,extEff)
+
+intra_mq_quant_long <- intra_mq_quant%>%
+  pivot_longer(cols = c("100_RP_filter_C_T38":"pooled_9"), 
+               names_to = "cName",
+               values_to = "Concentration")
+
+intra_mq_quant <- intra_mq_quant_long %>%
+  select(cName,SRMname,Concentration,)%>%
+  pivot_wider(names_from = SRMname, values_from = Concentration)
+
+```
+
+##### MM - original
+```{r long quant MM - original}
+
 colnames(intra_mm_quant)
 
 EE_MW_mm <- intra_mm_quant%>%
@@ -473,38 +521,78 @@ intra_mm_quant <- intra_mm_quant_long %>%
   select(cName,SRMname,Concentration)%>%
   pivot_wider(names_from = SRMname, values_from = Concentration)
 
-#MQ
-colnames(intra_mq_quant)
+```
 
-EE_MW_mq <- intra_mq_quant%>%
+##### MQ - DF10x
+```{r long quant MQ - DF10x}
+
+colnames(intra_mq_DF10x_quant)
+
+EE_MW_mq_DF10x <- intra_mq_DF10x_quant%>%
   select(SRMname,cleanName,MW,extEff)
 
-intra_mq_quant_long <- intra_mq_quant%>%
-  pivot_longer(cols = c("100_RP_filter_C_T38":"pooled_9"), 
+intra_mq_DF10x_quant_long <- intra_mq_DF10x_quant%>%
+  pivot_longer(cols = c("100_RP_filter_C_T38_DF10X":"pooled_9"), 
                names_to = "cName",
                values_to = "Concentration")
 
-intra_mq_quant <- intra_mq_quant_long %>%
-  select(cName,SRMname,Concentration)%>%
+intra_mq_DF10x_quant <- intra_mq_DF10x_quant_long %>%
+  select(cName,SRMname,Concentration,)%>%
   pivot_wider(names_from = SRMname, values_from = Concentration)
 
-rm(intra_mm_quant_long,intra_mq_quant_long)
+```
 
-MW_EE <- distinct(rbind(EE_MW_mm,EE_MW_mq))
+##### MQ - DF500x
+```{r long quant MQ - DF500x}
 
-rm(EE_MW_mm,EE_MW_mq)
+colnames(intra_mq_DF500x_quant)
+
+EE_MW_mq_DF500x <- intra_mq_DF500x_quant%>%
+  select(SRMname,cleanName,MW,extEff)
+
+intra_mq_DF500x_quant_long <- intra_mq_DF500x_quant%>%
+  pivot_longer(cols = c("100_RP_filter_C_T38_DF500X":"pooled_9"), 
+               names_to = "cName",
+               values_to = "Concentration")
+
+intra_mq_DF500x_quant <- intra_mq_DF500x_quant_long %>%
+  select(cName,SRMname,Concentration,)%>%
+  pivot_wider(names_from = SRMname, values_from = Concentration)
+
+```
+
+##### Exract out MW information across all (merge)
+```{r MW info}
+
+rm(intra_mm_quant_long,
+   intra_mq_quant_long,
+   intra_mq_DF10x_quant_long,
+   intra_mq_DF500x_quant_long)
+
+MW_EE <- distinct(rbind(EE_MW_mm,EE_MW_mq,EE_MW_mq_DF10x,EE_MW_mq_DF500x))
+
+rm(EE_MW_mm,
+   EE_MW_mq,
+   EE_MW_mq_DF10x,
+   EE_MW_mq_DF500x)
 
 ```
 
 ## Rename columns and extract/merge in various metadata
-### MQ quantified metabolites
-```{r metabolite MQ metadata,echo=FALSE,message=FALSE}
+
+### Date / time
+```{r date time spreadsheet}
 
 date_time <- allCellInfo%>%
   select(timepoint,date_time)%>%
   mutate(timepoint = as.character(timepoint))
 
-intra_mq_seq_filt <- intra_seq%>%
+```
+
+### MQ - original
+```{r metabolite MQ metadata,echo=FALSE,message=FALSE}
+
+intra_mq_seq_filt <- intra_original_seq%>%
   filter(shortName %in% intra_mq_quant$cName)%>%
   rename(runOrder = forSorting)%>%
   select(-c(concentration_ngML,tempFlag))
@@ -530,21 +618,23 @@ colnames(intra_mq_quant)
 intra_mq_quant_longer <- pivot_longer(intra_mq_quant,cols = "2_3 dihydroxypropane-1-sulfonate":"xanthosine neg",names_to ="mtabName",values_to = "Concentration_ngmL")%>%
   rename(shortName = cName)
 
-intra_MQ <- intra_mq_seq_filt %>%
+intra_MQ_original <- intra_mq_seq_filt %>%
   left_join(intra_mq_quant_longer, by = "shortName") %>%
   left_join(intra_mq_curve, by = "mtabName")%>%
   left_join(date_time %>% distinct(timepoint, date_time), by = "timepoint",keep=TRUE)%>%
   mutate(timepoint = coalesce(timepoint.x, timepoint.y)) %>%
-  select(-timepoint.x, -timepoint.y)
+  select(-timepoint.x, -timepoint.y)%>%
+  mutate(dilution_factor = "original",
+         quantType = "MQ")
 
 rm(intra_mq_seq_filt, pooled_mq, samples_mq)
 
 ```
 
-### MM quantified metabolites
+### MM - original
 ```{r metabolite MM metadata, echo=FALSE, message=FALSE}
 
-intra_mm_seq_filt <- intra_seq%>%
+intra_mm_seq_filt <- intra_original_seq%>%
   filter(shortName %in% intra_mm_quant$cName)%>%
   rename(runOrder = forSorting)%>%
   select(-c(concentration_ngML,tempFlag))
@@ -570,53 +660,139 @@ colnames(intra_mm_quant)
 intra_mm_quant_longer <- pivot_longer(intra_mm_quant,cols = "2_3-dihydroxybenzoic acid":"xanthosine neg",names_to ="mtabName",values_to = "Concentration_ngmL")%>%
   rename(shortName = cName)
 
-intra_MM <- intra_mm_seq_filt %>%
+intra_MM_original <- intra_mm_seq_filt %>%
   left_join(intra_mm_quant_longer, by = "shortName") %>%
   left_join(intra_mm_curve, by = "mtabName") %>%
   left_join(date_time %>% distinct(timepoint,date_time), by = "timepoint",keep=TRUE) %>%
   mutate(timepoint = coalesce(timepoint.x, timepoint.y)) %>%
-  select(-timepoint.x, -timepoint.y)
+  select(-timepoint.x, -timepoint.y)%>%
+  mutate(dilution_factor = "original",
+         quantType = "MM")
 
 rm(intra_mm_seq_filt, pooled_mm, samples_mm)
+
 ```
+
+### MQ - DF10x
+```{r metabolite MQ DF10x metadata,echo=FALSE,message=FALSE}
+
+intra_DF10x_seq_filt <- intra_DF10x_seq%>%
+  filter(shortName %in% intra_mq_DF10x_quant$cName)%>%
+  rename(runOrder = forSorting)%>%
+  select(-c(concentration_ngML,tempFlag))
+
+pooled_DF10x_mq <- intra_DF10x_seq_filt %>%
+  filter(grepl("pooled", shortName)) %>%
+  mutate(runOrder_name = NA, dataType = NA, source = NA, replicateID = NA, timepoint = NA)
+
+samples_DF10x_mq <- intra_DF10x_seq_filt%>%
+filter(!grepl("pooled", shortName)) %>%
+  separate(shortName, into = c("runOrder_name", "dataType", "source", "replicateID", "timepoint"), sep = "_",remove = FALSE) %>%
+  mutate(timepoint = as.character(gsub("T", "", timepoint)))
+
+# Combine results
+intra_DF10x_seq_filt <- bind_rows(samples_DF10x_mq, pooled_DF10x_mq)%>%
+  select(-runOrder_name)%>%
+  mutate(type = case_when(grepl("Blank", replicateID) ~ "blank",
+                          is.na(replicateID) ~ "pool",
+                          TRUE ~ "sample"))
+
+colnames(intra_mq_DF10x_quant)
+
+intra_mq_DF10x_quant_longer <- pivot_longer(intra_mq_DF10x_quant,cols = "4-hydroxybenzoic acid d4 neg":"taurocholic acid d5 neg",names_to ="mtabName",values_to = "Concentration_ngmL")%>%
+  rename(shortName = cName)
+
+intra_MQ_DF10x <- intra_DF10x_seq_filt %>%
+  left_join(intra_mq_DF10x_quant_longer, by = "shortName") %>%
+  left_join(intra_mq_DF10x_curve, by = "mtabName")%>%
+  left_join(date_time %>% distinct(timepoint, date_time), by = "timepoint",keep=TRUE)%>%
+  mutate(timepoint = coalesce(timepoint.x, timepoint.y)) %>%
+  select(-timepoint.x, -timepoint.y)%>%
+  mutate(dilution_factor = "df10x",
+         quantType = "MQ")
+
+rm(intra_DF10x_seq_filt, pooled_DF10x_mq, samples_DF10x_mq)
+
+```
+
+### MQ - DF500x
+```{r metabolite MQ DF500x metadata,echo=FALSE,message=FALSE}
+
+intra_DF500x_seq_filt <- intra_DF500x_seq%>%
+  filter(shortName %in% intra_mq_DF500x_quant$cName)%>%
+  rename(runOrder = forSorting)%>%
+  select(-c(concentration_ngML,tempFlag))
+
+pooled_DF500x_mq <- intra_DF500x_seq_filt %>%
+  filter(grepl("pooled", shortName)) %>%
+  mutate(runOrder_name = NA, dataType = NA, source = NA, replicateID = NA, timepoint = NA)
+
+samples_DF500x_mq <- intra_DF500x_seq_filt%>%
+filter(!grepl("pooled", shortName)) %>%
+  separate(shortName, into = c("runOrder_name", "dataType", "source", "replicateID", "timepoint"), sep = "_",remove = FALSE) %>%
+  mutate(timepoint = as.character(gsub("T", "", timepoint)))
+
+# Combine results
+intra_DF500x_seq_filt <- bind_rows(samples_DF500x_mq, pooled_DF500x_mq)%>%
+  select(-runOrder_name)%>%
+  mutate(type = case_when(grepl("Blank", replicateID) ~ "blank",
+                          is.na(replicateID) ~ "pool",
+                          TRUE ~ "sample"))
+
+colnames(intra_mq_DF500x_quant)
+
+intra_mq_DF500x_quant_longer <- pivot_longer(intra_mq_DF500x_quant,cols = "4-hydroxybenzoic acid d4 neg":"taurocholic acid d5 neg",names_to ="mtabName",values_to = "Concentration_ngmL")%>%
+  rename(shortName = cName)
+
+intra_MQ_DF500x <- intra_DF500x_seq_filt %>%
+  left_join(intra_mq_DF500x_quant_longer, by = "shortName") %>%
+  left_join(intra_mq_DF500x_curve, by = "mtabName")%>%
+  left_join(date_time %>% distinct(timepoint, date_time), by = "timepoint",keep=TRUE)%>%
+  mutate(timepoint = coalesce(timepoint.x, timepoint.y)) %>%
+  select(-timepoint.x, -timepoint.y)%>%
+  mutate(dilution_factor = "df500x",
+         quantType = "MQ")
+
+rm(intra_DF500x_seq_filt, pooled_DF500x_mq, samples_DF500x_mq)
+
+```
+
+# Combine datasets into single data table
+z = zeros removed (metabolites that are zero in all samples)
+```{r combine into one}
+
+#Merge datasets together
+Intra <- rbind(intra_MQ_original,intra_MM_original,intra_MQ_DF10x,intra_MQ_DF500x)
+
+Intra <- Intra%>%
+  mutate(combined_mtab_ID = paste(mtabName,
+                                  quantType,
+                                  dilution_factor))
+colnames(Intra)
+
+```
+
+# QA/QC
+
 ## Remove metabolites that are not found in any samples
-### MQ quantified metabolites
 Remove any metabolites that are zero in every sample (not quantified)
+z = zeros removed (metabolites that are zero in all samples)
 ```{r metabolite MQ non zero}
 
-intra_MQ_z <-intra_MQ%>%
-  group_by(mtabName)%>%
+Intra_z <-Intra%>%
+  group_by(combined_mtab_ID)%>%
   filter(slope > 0)%>%
-  mutate(mean_mtab = mean(Concentration_ngmL,na.rm=TRUE),sdev_mtab = sd(Concentration_ngmL,na.rm=TRUE))%>%
+  mutate(mean_mtab = mean(Concentration_ngmL,na.rm=TRUE),
+         sdev_mtab = sd(Concentration_ngmL,na.rm=TRUE))%>%
   filter(mean_mtab != 0, 
          sdev_mtab != 0)%>%
-  group_by(mtabName,timepoint,type)%>%
-  mutate(quantType = "MQ")
+  ungroup()
 
-intra_MQ_z%>%
-  ungroup()%>%
+
+Intra_z%>%
   select(mtabName)%>%
-  unique()
-
-```
-
-### MM quantified metabolites
-Remove metabolites that are zero in all samples, have negative slopes, or have no curve data reported
-```{r metabolite MM non zero}
-
-intra_MM_z <-intra_MM%>%
-  group_by(mtabName)%>%
-  filter(slope > 0)%>%
-  mutate(mean_mtab = mean(Concentration_ngmL,na.rm=TRUE),sdev_mtab = sd(Concentration_ngmL,na.rm=TRUE))%>%
-  filter(mean_mtab != 0, 
-         sdev_mtab != 0)%>%
-  group_by(mtabName,timepoint,type)%>%
-  mutate(quantType = "MM")
-
-intra_MM_z%>%
-  ungroup()%>%
-  select(mtabName)%>%
-  unique()
+  unique()%>%
+  deframe()
 
 ```
 
@@ -628,72 +804,26 @@ intra_MM_z%>%
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MQ_plots_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MQ_plots_", today, "_bmg.pdf")
 
 # Save the plot
 #pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
-unique_names <- unique(intra_MQ_z$mtabName)
+unique_names <- Intra_z%>%
+  arrange(mtabName)%>%
+  select(combined_mtab_ID)%>%
+  unique()%>%
+  deframe()
 
 # Loop through each unique mtabName
 for (i in seq_along(unique_names)) {
   dynamic_title <- unique_names[i]  # Current title based on mtabName
 
   # Filter and plot for the current mtabName
-  p <- intra_MQ_z %>%
+  p <- Intra_z %>%
     mutate(timepoint = as.numeric(timepoint))%>%
-    filter(mtabName == dynamic_title, type != "pool") %>%
-    group_by(type, timepoint) %>%
-    ggplot(aes(x = timepoint, y = Concentration_ngmL)) +
-    geom_point(size=3) +
-    geom_hline(aes(yintercept = LOD),color="red", linetype = "dashed")+
-    geom_smooth(aes(x=timepoint,y=Concentration_ngmL),
-                linewidth = 1, 
-                color = "black",
-                se = FALSE,
-                method = "gam", formula = y ~ s(x, bs = "cs")) +
-    stat_smooth(aes(x=timepoint,y=Concentration_ngmL),
-                method = "gam", formula = y ~ s(x, bs = "cs"), 
-                fill = "black",
-                alpha = .3,
-                linewidth = 1,
-                geom = "ribbon")+
-    labs(x = "timepoint", y = "Concentration (ng/mL)", title = dynamic_title) +
-    facet_wrap(~type, ncol = 1,scales="free") +
-    scale_x_continuous(breaks = seq(0, 46, by = 2))+  # Set x-axis breaks from 12 to 46
-    theme_bw(base_size = 14)
-
-  # Print the plot to the PDF
-  print(p)
-}
-
-# Close the PDF device
-dev.off()
-
-```
-
-```{r metabolite MM raw stacked plots}
-
-# Create a PDF to save all plots
-
-# Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MM_plots_", today, "_bmg.pdf")
-
-# Save the plot
-#pdf(filename, width = 11, height = 8.5)
-
-# Get unique values of mtabName
-unique_names <- unique(intra_MM_z$mtabName)
-
-# Loop through each unique mtabName
-for (i in seq_along(unique_names)) {
-  dynamic_title <- unique_names[i]  # Current title based on mtabName
-
-  # Filter and plot for the current mtabName
-  p <- intra_MM_z %>%
-    mutate(timepoint = as.numeric(timepoint))%>%
-    filter(mtabName == dynamic_title, type != "pool") %>%
+    filter(combined_mtab_ID == dynamic_title, type != "pool") %>%
     group_by(type, timepoint) %>%
     ggplot(aes(x = timepoint, y = Concentration_ngmL)) +
     geom_point(size=3) +
@@ -724,26 +854,29 @@ dev.off()
 ```
 
 ### Plot raw (non-QA/QC) metabolite data (overlaid)
-
 ```{r metabolite MQ raw overlaid plots}
 
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MQ_overlaid_plots_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MQ_overlaid_plots_", today, "_bmg.pdf")
 
 # Save the plot
 #pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
-unique_names <- unique(intra_MQ_z$mtabName)
+unique_names <- Intra_z%>%
+  arrange(mtabName)%>%
+  select(combined_mtab_ID)%>%
+  unique()%>%
+  deframe()
 
 # Loop through each unique mtabName
 for (i in seq_along(unique_names)) {
   dynamic_title <- unique_names[i]  # Current title based on mtabName
 
   # Filter and plot for the current mtabName
-  p <- intra_MQ_z %>%
+  p <- Intra_z %>%
     mutate(timepoint = as.numeric(timepoint))%>%
     filter(mtabName == dynamic_title, type != "pool") %>%
     group_by(type, timepoint) %>%
@@ -760,66 +893,18 @@ for (i in seq_along(unique_names)) {
 }
 
 # Close the PDF device
-dev.off()
+#dev.off()
 
 ```
 
-```{r metabolite MM raw overlaid plots}
-# Create a PDF to save all plots
-
-# Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MM_overlaid_plots_", today, "_bmg.pdf")
-
-# Save the plot
-#pdf(filename, width = 11, height = 8.5)
-
-# Get unique values of mtabName
-unique_names <- unique(intra_MM_z$mtabName)
-
-# Loop through each unique mtabName
-for (i in seq_along(unique_names)) {
-  dynamic_title <- unique_names[i]  # Current title based on mtabName
-
-  # Filter and plot for the current mtabName
-  p <- intra_MM_z %>%
-    mutate(timepoint = as.numeric(timepoint))%>%
-    filter(mtabName == dynamic_title, type != "pool") %>%
-    group_by(type, timepoint) %>%
-    ggplot(aes(x = timepoint, y = Concentration_ngmL,color=type)) +
-    geom_hline(aes(yintercept = LOD),color="red", linetype = "dashed")+
-    geom_point() +
-    geom_smooth(aes(x=timepoint,y=Concentration_ngmL),
-                method = "gam", formula = y ~ s(x, bs = "cs"), se=FALSE)+
-    labs(x = "timepoint", y = "Concentration (ng/mL)", title = dynamic_title) +
-    theme_bw(base_size = 14)
-
-  # Print the plot to the PDF
-  print(p)
-}
-
-# Close the PDF device
-dev.off()
-
-```
-## QA/QC 
-
-### Combine datasets into single data table
-z = zeros removed (metabolites that are zero in all samples)
-```{r combine into one}
-
-#Merge datasets together
-Intra_z <- rbind(intra_MQ_z,intra_MM_z)
-
-colnames(Intra_z)
-
-```
-### R2 filtering
+## R2 filtering
 r = r-squared filtering. Curve must have an r-squared > 0.8
 ```{r qaqc r2}
 
 Intra_zr <- Intra_z%>%
-  ungroup()%>%
-  filter(r2_line >= 0.8)
+  group_by(combined_mtab_ID)%>%
+  filter(r2_line >= 0.8)%>%
+  ungroup()
 
 ```
 ### Blank filtering
@@ -827,7 +912,7 @@ b = blank subtraction (mean blank) by timepoint, filtering based on number above
 ```{r qaqc blank sub}
 
 Intra_zrb <- Intra_zr %>%
-  group_by(mtabName, timepoint, quantType) %>%
+  group_by(combined_mtab_ID,timepoint) %>%
   
   # Calculate mean_blank for blank rows only
   mutate(mean_blank = mean(Concentration_ngmL[type == "blank"], na.rm = TRUE)) %>%
@@ -864,7 +949,7 @@ m = missing filtering, takeout timepoints where 2/3 are not > LOD after blank su
 
 Intra_zrbm <- Intra_zrb %>%
   # Group by mtabName, quantType, and timepoint to calculate mean
-  group_by(mtabName, quantType, timepoint) %>%
+  group_by(combined_mtab_ID,timepoint) %>%
   # Calculate the mean for each group and keep all rows
   mutate(mean_blank_adj_concentration = ifelse(length(blank_adj_concentration[!is.na(blank_adj_concentration)]) == 0, NA,  mean(blank_adj_concentration, na.rm = TRUE)))%>%
   # Ungroup to prepare for counting distinct timepoints
@@ -891,16 +976,6 @@ Intra_zrbmn <- Intra_zrbm_merged%>%
   mutate(Blank_adj_concentration_ngmL_inSample = if_else(blank_adj_concentration > 0,
    (blank_adj_concentration*2*0.05)/`Filtered weight (g)`,blank_adj_concentration))
 
-colnames(Intra_zrbmn)
-
-Intra_zrbmn%>%
-  select(mtabName,quantType,timepoint,replicateID,Sample.Type,Concentration_ngmL,
-         mean_blank,diff_sample_blank,blank_adj_concentration,`Filtered weight (g)`,Blank_adj_concentration_ngmL_inSample)%>%
-  mutate(timepoint = as.numeric(timepoint))%>%
-  filter(mtabName == "sucrose pos",quantType == "MQ",Sample.Type !="QC")%>%
-  arrange(timepoint,replicateID)%>%
-  select(-c(Sample.Type,quantType))
-
 rm(Intra_zrbm_merged)
 
 ```
@@ -913,39 +988,44 @@ rm(Intra_zrbm_merged)
 
 Intra_zrbmn%>%
   select(mtabName)%>%
+  arrange(mtabName)%>%
   deframe()%>%
   unique()%>%
   sort()
 
 Intra_zrbmn_mtabs <- Intra_zrbmn%>%
-  mutate(mtab_quant = paste(mtabName,quantType))%>%
-  select(mtab_quant)%>%
+  arrange(mtabName)%>%
+  select(combined_mtab_ID)%>%
   deframe()%>%
-  unique()%>%
-  sort()
+  unique()
 
 view(Intra_zrbmn_mtabs)
 
 print(Intra_zrbmn_mtabs)
 
-#write.csv(Intra_zrbmn_mtabs,"Z:/Brianna/Projects/Pro_Diel/Scripts/R/r_csv_outputs/Pro11_Intra_mtabNames_postQC_needDuplicateRemoval_20250422.csv")
+filename <- paste0("Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_mtabNames_postQC_needDuplicateRemoval_", today, "_bmg.csv")
+
+#write.csv(Intra_zrbmn_mtabs,filename)
 
 ```
 
 ## Plot filtered (QC'd) metabolite data - pre duplicate removal
-### Stacked
 ```{r metabolite QCd stacked plots}
 
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_VolumeNorm_mtab_stacked_plots_LODfilt_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_VolumeNorm_mtab_stacked_plots_LODfilt_", today, "_bmg.pdf")
 
 # Save the plot
 #pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
-unique_names <- unique(Intra_zrbmn$mtabName)%>%sort()
+unique_names <- Intra_zrbmn%>%
+  arrange(mtabName)%>%
+  select(mtabName)%>%
+  unique()%>%
+  deframe()
 
 # Loop through each unique mtabName
 for (i in seq_along(unique_names)) {
@@ -979,8 +1059,8 @@ for (i in seq_along(unique_names)) {
                 geom = "ribbon")+
     #geom_hline(aes(yintercept = LOD),color="red", linetype = "dashed")+
     labs(x = "timepoint", y = "Blank Subtracted Concentration in Sample (ng/mL)", title = dynamic_title) +
-    facet_wrap(~quantType, ncol = 1,scales="free") +
   scale_x_continuous(breaks = seq(0, 48, by = 2)) +
+    facet_grid(dilution_factor~quantType,scales = "free")+
     theme_bw(base_size = 14)
 
   # Print the plot to the PDF
@@ -995,7 +1075,7 @@ dev.off()
 
 ```{r remove duplicate metabolites}
 
-dupList_filled <- read.csv(file = "Scripts/R/r_csv_outputs/Pro11_Intra_mtabNames_postQC_needDuplicateRemoval_20250422.csv")
+dupList_filled <- read.csv(file = "Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_mtabNames_postQC_needDuplicateRemoval_20250717_bmg.csv")
 
 toRemove <- dupList_filled%>%
   filter(goodMtab == 0)%>%
@@ -1003,13 +1083,9 @@ toRemove <- dupList_filled%>%
   deframe()
 
 Intra_zrbmnd <- Intra_zrbmn %>%
-  mutate(mtab_quant = paste(mtabName,quantType))%>%
-  filter(!mtab_quant %in% toRemove,
-         quantType == "MQ")
+  filter(!combined_mtab_ID %in% toRemove)
 
-view(Intra_zrbmnd)
-
-unique(Intra_zrbmnd$mtab_quant)
+unique(Intra_zrbmnd$combined_mtab_ID)
 
 ```
 
@@ -1058,7 +1134,7 @@ Intra_fullQC <- Intra_fullQC%>%
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_nonNorm_vs_cellNorm_mtab_stacked_plots_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_nonNorm_vs_cellNorm_mtab_stacked_plots_", today, "_bmg.pdf")
 
 # Save the plot
 #pdf(filename, width = 11, height = 8.5)
@@ -1108,7 +1184,7 @@ dev.off()
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_", today, "_bmg.pdf")
 
 # Save the plot
 #pdf(filename, width = 11, height = 8.5)
@@ -1217,12 +1293,12 @@ print(p1)
 print(p2)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_", today, "_bmg.png")
 
 #ggsave(filename,plot=p1,height=11,width=20,dpi=300)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_", today, "_bmg.png")
 
 #ggsave(filename,plot=p2,height=11,width=20,dpi=300)
 
@@ -1294,12 +1370,12 @@ print(p1)
 print(p2)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_pointSmooth_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_pointSmooth_", today, "_bmg.png")
 
 #ggsave(filename,plot=p1,height=11,width=20,dpi=300)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_pointSmooth_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_pointSmooth_", today, "_bmg.png")
 
 #ggsave(filename,plot=p2,height=11,width=20,dpi=300)
 
@@ -1311,7 +1387,7 @@ filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_meanSdev_mtab_plots_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_meanSdev_mtab_plots_", today, "_bmg.pdf")
 
 # Save the plot
 #pdf(filename, width = 11, height = 8.5)
@@ -1425,12 +1501,12 @@ print(p1)
 print(p2)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_pointSdev_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_pointSdev_", today, "_bmg.png")
 
 #ggsave(filename,plot=p1,height=11,width=20,dpi=300)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_pointSdev_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_pointSdev_", today, "_bmg.png")
 
 #ggsave(filename,plot=p2,height=11,width=20,dpi=300)
 
@@ -1466,7 +1542,7 @@ df_long <- df_long %>%
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_heatmap_bypeakZscore_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_heatmap_bypeakZscore_", today, "_bmg.pdf")
 
 # Save the plot
 #pdf(filename, width = 8.5, height = 11)
@@ -1493,7 +1569,7 @@ print(fullQC_heatmap)
 dev.off()
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_heatmap_bypeakZscore_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_heatmap_bypeakZscore_", today, "_bmg.png")
 
 #ggsave(filename,plot=fullQC_heatmap,height=11,width=8.5,units = "in",dpi=300)
 
@@ -1503,7 +1579,7 @@ filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtab_heatmap_bypea
 ```{r concen change over time}
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_agCell_SequentialDifference_plot_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_agCell_SequentialDifference_plot_", today, "_bmg.pdf")
 
 #pdf(filename, width = 11, height = 8.5)
 
@@ -1526,7 +1602,7 @@ Intra_fullQC %>%
 dev.off()
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_agCell_T0subtracted_plot_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_agCell_T0subtracted_plot_", today, "_bmg.pdf")
 
 #pdf(filename, width = 11, height = 8.5)
   
@@ -1668,7 +1744,7 @@ filename <- paste0("Scripts/R/r_csv_outputs/Pro11_Intra_withQC_cellNorm_mtabTabl
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_rainSig24_LRsig_plots_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_rainSig24_LRsig_plots_", today, "_bmg.pdf")
 
 #pdf(filename, width = 11, height = 8.5)
 
@@ -1788,7 +1864,7 @@ mtab_heatmap <- df_long %>%
   scale_x_continuous(breaks = seq(0, 46, by = 2))
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_Intra_cellNorm_temporalSig_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_Intra_cellNorm_temporalSig_", today, "_bmg.pdf")
 
 #pdf(filename, width = 11, height = 8.5)
 
@@ -1850,7 +1926,7 @@ mtab_heatmap <- df_long %>%
   scale_x_continuous(breaks = seq(0, 46, by = 2))
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_Intra_cellNorm_temporalSig_allTimepoints_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_Intra_cellNorm_temporalSig_allTimepoints_", today, "_bmg.pdf")
 
 #pdf(filename, width = 11, height = 8.5)
 
@@ -1894,7 +1970,7 @@ metab_with_stability <- metab_rsd %>%
 ```{r metabolite variability plotting - all, warning=FALSE}
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtabRSD_vs_cellCycleEntropy_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtabRSD_vs_cellCycleEntropy_", today, "_bmg.pdf")
 
 #pdf(filename, width = 11, height = 8.5)
 
@@ -1968,7 +2044,7 @@ unique_names <- lm_results %>%
   deframe()
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_mtabRSD_vs_cellCycleEntropy_sig05_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtabRSD_vs_cellCycleEntropy_sig05_", today, "_bmg.pdf")
 
 #pdf(filename, width = 11, height = 8.5)
 
@@ -2008,7 +2084,7 @@ dev.off()
 scale_factor <- max(Intra_fullQC$cell_count_mean, na.rm = TRUE) / 150  # 200 = max RSD y-axis
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_Intra_QCd_Mtab_RSD_overTime_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_Intra_QCd_Mtab_RSD_overTime_", today, "_bmg.pdf")
 
 #pdf(filename, width = 11, height = 8.5)
 
@@ -2126,7 +2202,7 @@ bar_tops <- dom_cellCycle %>%
 label_df <- left_join(bar_tops, n_timepoints_df, by = "domCellCycle")
 
 # Generate the filename with the date automatically included
-#filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_stackedBar_cellCyle_", today, "_bmg.pdf")
+#filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_stackedBar_cellCyle_", today, "_bmg.pdf")
 
 #pdf(filename, width = 8.5, height = 11)
 
@@ -2154,7 +2230,7 @@ dev.off()
 ```{r stacked bar chart plotting cell cycle}
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_stackedBar_moleFraction_cellCyle_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_stackedBar_moleFraction_cellCyle_", today, "_bmg.pdf")
 
 #pdf(filename, width = 8.5, height = 11)
 
@@ -2182,7 +2258,7 @@ dev.off()
 ```{r treemap_plot}
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/figures/PD22_Pro11_QCd_cellNorm_treeMap_moleFraction_cellCyle_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_treeMap_moleFraction_cellCyle_", today, "_bmg.pdf")
 
 #pdf(filename, width = 11, height = 8.5)
 

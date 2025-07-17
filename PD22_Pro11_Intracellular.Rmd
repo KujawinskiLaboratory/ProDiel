@@ -3,6 +3,8 @@ title: "PD22_Pro11_Data_Analysis"
 author: "Brianna Garcia"
 date: "`r Sys.Date()`"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 # Document preparation
 ## Set working directory
@@ -51,6 +53,14 @@ library(Polychrome)
 library(treemapify)
 library(broom)
 library(patchwork)
+
+```
+
+# Save plots or skip
+Set to 1 if you want the script to save the plots, set to 0 if you do not want to save any plots.
+```{r save plots setting}
+
+should_save <- 0  # or 1 to save
 
 ```
 
@@ -170,7 +180,7 @@ print(cellCounts_time_plot)
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_cellCounts_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
-#ggsave(filename, plot = cellCounts_time_plot, width = 11, height = 8.5, dpi = 300)
+if (should_save) ggsave(filename, plot = cellCounts_time_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 
@@ -208,7 +218,7 @@ print(cellCounts_extrap_plot)
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_cellCounts_extrapolatedToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
-#ggsave(filename, plot = cellCounts_extrap_plot, width = 11, height = 8.5, dpi = 300)
+if (should_save) ggsave(filename, plot = cellCounts_extrap_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 
@@ -251,9 +261,7 @@ print(cellCycle_time_plot)
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_cellCycle_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
-#ggsave(filename, plot = cellCycle_time_plot, width = 11, height = 8.5, dpi = 300)
-
-
+if (should_save) ggsave(filename, plot = cellCycle_time_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 #### Plot - Light intensity
@@ -279,8 +287,7 @@ light_time_plot
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_lightLevels_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
-#ggsave(filename, plot = light_time_plot, width = 11, height = 8.5, dpi = 300)
-
+if (should_save) ggsave(filename, plot = light_time_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 #### Plot - Forward Angle Light Scatter (FALS)
@@ -318,7 +325,7 @@ print(FALS_time_plot)
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_FALS_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
-#ggsave(filename, plot = FALS_time_plot, width = 11, height = 8.5, dpi = 300)
+if (should_save) ggsave(filename, plot = FALS_time_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 #### Plot - Chlorophyll concentration per cell
@@ -356,7 +363,7 @@ print(Chl_time_plot)
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_ChlCell_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
-#ggsave(filename, plot = Chl_time_plot, width = 11, height = 8.5, dpi = 300)
+if (should_save) ggsave(filename, plot = Chl_time_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 #### Combined plots from above
@@ -405,7 +412,7 @@ cellCount_FALS_plot
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_CellCount_FALS_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
-#ggsave(filename, plot = cellCount_FALS_plot, width = 11, height = 8.5, dpi = 300)
+if (should_save) ggsave(filename, plot = cellCount_FALS_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 
@@ -429,7 +436,7 @@ combinedCellData_plot
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_pro11_combinedCellData_extToZero_300dpi_", today, "_bmg.png")
 
 # Save the plot
-#ggsave(filename, plot = combinedCellData_plot, width = 11, height = 8.5, dpi = 300)
+if (should_save) ggsave(filename, plot = combinedCellData_plot, width = 11, height = 8.5, dpi = 300)
 
 ```
 ## Intracellular Metabolite Quantification
@@ -804,10 +811,10 @@ Intra_z%>%
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MQ_plots_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_plots_", today, "_bmg.pdf")
 
 # Save the plot
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
 unique_names <- Intra_z%>%
@@ -859,10 +866,10 @@ dev.off()
 # Create a PDF to save all plots
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_MQ_overlaid_plots_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_rawNoQC_nonZeroMtabs_nonNorm_overlaid_plots_", today, "_bmg.pdf")
 
 # Save the plot
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
 unique_names <- Intra_z%>%
@@ -878,7 +885,7 @@ for (i in seq_along(unique_names)) {
   # Filter and plot for the current mtabName
   p <- Intra_z %>%
     mutate(timepoint = as.numeric(timepoint))%>%
-    filter(mtabName == dynamic_title, type != "pool") %>%
+    filter(combined_mtab_ID == dynamic_title, type != "pool") %>%
     group_by(type, timepoint) %>%
     ggplot(aes(x = timepoint, y = Concentration_ngmL,color=type)) +
     geom_hline(aes(yintercept = LOD),color="red", linetype = "dashed")+
@@ -955,7 +962,7 @@ Intra_zrb <- Intra_zr %>%
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_dfAdjusted_ngmL_plots_wLOD_", today, "_bmg.pdf")
 
 # Save the plot
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
 unique_names <- Intra_zrb%>%
@@ -1078,7 +1085,7 @@ Blank subtracted concentration in ng/mL
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_VolumeNorm_mtab_stacked_plots_LODfilt_", today, "_bmg.pdf")
 
 # Save the plot
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
 unique_names <- Intra_zrbmn%>%
@@ -1199,7 +1206,7 @@ Intra_fullQC <- Intra_fullQC%>%
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_nonNorm_vs_cellNorm_mtab_stacked_plots_", today, "_bmg.pdf")
 
 # Save the plot
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
 unique_names <- unique(Intra_fullQC$mtabName)
@@ -1249,7 +1256,7 @@ dev.off()
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_", today, "_bmg.pdf")
 
 # Save the plot
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
 unique_names <- unique(Intra_fullQC$mtabName)
@@ -1294,8 +1301,8 @@ dev.off()
 unique_mtabs <- unique(Intra_fullQC$mtabName)
 
 # Split into two groups
-group1_mtabs <- unique_mtabs[1:20]
-group2_mtabs <- unique_mtabs[21:37]
+group1_mtabs <- unique_mtabs[1:24]
+group2_mtabs <- unique_mtabs[25:48]
 
 # Step 1: Summarize data
 summary_df <- Intra_fullQC %>%
@@ -1320,7 +1327,7 @@ p1 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
   labs(x = "timepoint", y = "attomole per cell") +
   scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
   theme_classic(base_size = 14) +
-  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 6)
 
 print(p1)
 
@@ -1349,20 +1356,20 @@ p2 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
   labs(x = "timepoint", y = "attomole per cell") +
   scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
   theme_classic(base_size = 14) +
-  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 6)
 
 print(p1)
 print(p2)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_barplots_first20_", today, "_bmg.png")
 
-#ggsave(filename,plot=p1,height=11,width=20,dpi=300)
+if (should_save) ggsave(filename,plot=p1,height=11,width=20,dpi=300)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_barplots_21to37_", today, "_bmg.png")
 
-#ggsave(filename,plot=p2,height=11,width=20,dpi=300)
+if (should_save) ggsave(filename,plot=p2,height=11,width=20,dpi=300)
 
 ```
 
@@ -1373,8 +1380,8 @@ filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab
 unique_mtabs <- unique(Intra_fullQC$mtabName)
 
 # Split into two groups
-group1_mtabs <- unique_mtabs[1:20]
-group2_mtabs <- unique_mtabs[21:37]
+group1_mtabs <- unique_mtabs[1:24]
+group2_mtabs <- unique_mtabs[25:48]
 
 # Step 1: Summarize data
 summary_df <- Intra_fullQC %>%
@@ -1398,7 +1405,7 @@ p1 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
   labs(x = "timepoint", y = "attomole per cell") +
   scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
   theme_classic(base_size = 14) +
-  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 6)
 
 print(p1)
 
@@ -1426,20 +1433,20 @@ p2 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
   labs(x = "timepoint", y = "attomole per cell") +
   scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
   theme_classic(base_size = 14) +
-  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 6)
 
 print(p1)
 print(p2)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_pointSmooth_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_smoothedplots_first20_pointSmooth_", today, "_bmg.png")
 
-#ggsave(filename,plot=p1,height=11,width=20,dpi=300)
+if (should_save) ggsave(filename,plot=p1,height=11,width=20,dpi=300)
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_pointSmooth_", today, "_bmg.png")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_smoothedplots_21to37_pointSmooth_", today, "_bmg.png")
 
-#ggsave(filename,plot=p2,height=11,width=20,dpi=300)
+if (should_save) ggsave(filename,plot=p2,height=11,width=20,dpi=300)
 
 ```
 
@@ -1452,7 +1459,7 @@ filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_meanSdev_mtab_plots_", today, "_bmg.pdf")
 
 # Save the plot
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
 unique_names <- unique(Intra_fullQC$mtabName)
@@ -1502,8 +1509,8 @@ dev.off()
 unique_mtabs <- unique(Intra_fullQC$mtabName)
 
 # Split into two groups
-group1_mtabs <- unique_mtabs[1:20]
-group2_mtabs <- unique_mtabs[21:37]
+group1_mtabs <- unique_mtabs[1:24]
+group2_mtabs <- unique_mtabs[25:48]
 
 # Step 1: Summarize data
 summary_df <- Intra_fullQC %>%
@@ -1528,7 +1535,7 @@ p1 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
   labs(x = "timepoint", y = "attomole per cell") +
   scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
   theme_classic(base_size = 14) +
-  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 6)
 
 print(p1)
 
@@ -1557,7 +1564,7 @@ p2 <- ggplot(summary_df, aes(x = timepoint.x, y = mean_val)) +
   labs(x = "timepoint", y = "attomole per cell") +
   scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
   theme_classic(base_size = 14) +
-  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 5)
+  facet_wrap(~mtabName, scales = "free", ncol = 4, nrow = 6)
 
 print(p1)
 print(p2)
@@ -1565,12 +1572,12 @@ print(p2)
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_first20_pointSdev_", today, "_bmg.png")
 
-#ggsave(filename,plot=p1,height=11,width=20,dpi=300)
+if (should_save) ggsave(filename,plot=p1,height=11,width=20,dpi=300)
 
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_plots_21to37_pointSdev_", today, "_bmg.png")
 
-#ggsave(filename,plot=p2,height=11,width=20,dpi=300)
+if (should_save) ggsave(filename,plot=p2,height=11,width=20,dpi=300)
 
 ```
 
@@ -1607,7 +1614,7 @@ df_long <- df_long %>%
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_heatmap_bypeakZscore_", today, "_bmg.pdf")
 
 # Save the plot
-#pdf(filename, width = 8.5, height = 11)
+if (should_save) pdf(filename, width = 8.5, height = 11)
 
 # Create heatmap
 fullQC_heatmap <- df_long %>%
@@ -1633,7 +1640,7 @@ dev.off()
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab_heatmap_bypeakZscore_", today, "_bmg.png")
 
-#ggsave(filename,plot=fullQC_heatmap,height=11,width=8.5,units = "in",dpi=300)
+if (should_save) ggsave(filename,plot=fullQC_heatmap,height=11,width=8.5,units = "in",dpi=300)
 
 ```
 
@@ -1643,7 +1650,7 @@ filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtab
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_agCell_SequentialDifference_plot_", today, "_bmg.pdf")
 
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 #Sequential
 Intra_fullQC %>%
@@ -1655,6 +1662,10 @@ Intra_fullQC %>%
   mutate(delta_conc = mean_concen_agCell - lag(mean_concen_agCell)) %>%
   ungroup()%>%
   ggplot(aes(x = timepoint.x, y = delta_conc)) +
+  geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", inherit.aes = FALSE) +
   geom_line(alpha = 0.5) +
   geom_smooth(method = "loess", se = FALSE, linewidth = 1.2) +
   labs(x = "Time (hours)", y = "Change in Concentration", title = "Change in Intracellular Metabolite Levels (Stepwise)") +
@@ -1666,7 +1677,7 @@ dev.off()
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_agCell_T0subtracted_plot_", today, "_bmg.pdf")
 
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
   
   #From T0
   Intra_fullQC %>%
@@ -1679,6 +1690,10 @@ filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_agCe
   mutate(delta_from_T0 = mean_concen_agCell - first(mean_concen_agCell)) %>%
       ungroup()%>%
   ggplot(aes(x = timepoint.x, y = delta_from_T0)) +
+    geom_rect(aes(xmin = 10, xmax = 20, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", alpha = 0.5, inherit.aes = FALSE) +
+  geom_rect(aes(xmin = 34, xmax = 44, ymin = -Inf, ymax = Inf), 
+            fill = "gray90", inherit.aes = FALSE) +
   geom_line(alpha = 0.5) +
   geom_smooth(method = "loess", se = FALSE, linewidth = 1.2) +
   labs(x = "Time (hours)", y = "Change in Concentration", title = "Change in Intracellular Metabolite Levels (Compared to T0)") +
@@ -1741,16 +1756,19 @@ x <- Intra_fullQC%>%
          date_time,
          mtabName,
          quantType,
-         mtab_quant,
+         dilution_factor,
+         combined_mtab_ID,
          r2_line,
          n_timepoints,
          Concentration_ngmL,
+         df_adjusted_ngmL,
          mean_blank,
          blank_adj_concentration,
          Blank_adj_concentration_ngmL_inSample,
+         Blank_adj_concentration_inSample_nM,
          cellNorm_blank_adj_concen_inSample_agCell)
 
-df_w_mtab_trends <- left_join(x,rain_24,by = )
+df_w_mtab_trends <- left_join(x,rain_24,by = "mtabName" )
 
 df_w_mtab_trends<- df_w_mtab_trends%>%
   mutate(isRAINsig = ifelse(rain_pVal < 0.05, 1, 0))
@@ -1794,9 +1812,9 @@ sigLR_mtabNames <- df_w_mtab_trends %>%
 ```{r Write temporal analysis results to table}
 
 # Generate the filename with the date automatically included
-filename <- paste0("Scripts/R/r_csv_outputs/Pro11_Intra_withQC_cellNorm_mtabTable_wTemporalAnalysis_", today, "_bmg.csv")
+filename <- paste0("Scripts/R/Intracellular/r_csv_outputs/Pro11_Intra_withQC_cellNorm_mtabTable_wTemporalAnalysis_", today, "_bmg.csv")
 
-#write.csv(df_w_mtab_trends,filename)
+if (should_save) write.csv(df_w_mtab_trends,filename)
 
 ```
 
@@ -1808,7 +1826,7 @@ filename <- paste0("Scripts/R/r_csv_outputs/Pro11_Intra_withQC_cellNorm_mtabTabl
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_rainSig24_LRsig_plots_", today, "_bmg.pdf")
 
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 # Get unique values of mtabName
 unique_names <- df_w_mtab_trends%>%
@@ -1817,17 +1835,12 @@ unique_names <- df_w_mtab_trends%>%
   unique()%>%
   deframe()
 
-# Split into two groups
-group1_mtabs <- unique_names[1:14]
-group2_mtabs <- unique_names[15:28] 
-
 # Loop through each unique mtabName
 for (i in seq_along(unique_names)) {
   dynamic_title <- unique_names[i]  # Current title based on mtabName
 
   # Filter and plot for the current mtabName
 p <- df_w_mtab_trends %>%
-  #filter(mtabName %in% group2_mtabs)%>%
   mutate(colorCode = case_when(
     isLRsig == 1 & isRAINsig == 0 ~ "#1f78b4",  # blue
     isLRsig == 0 & isRAINsig == 1 ~ "#ff7f00",  # orange
@@ -1857,12 +1870,10 @@ p <- df_w_mtab_trends %>%
   # Axes and theme
   labs(x = "timepoint", y = "attomole per cell", 
        title = dynamic_title,
-       subtitle = "Blue = sig. LR; Orange = sig. RAIN; Purple = sig. both") +
+       subtitle = "Blue = sig LR; Orange = sig RAIN; Purple = sig Both") +
   scale_x_continuous(breaks = seq(from = 0, to = 46, by = 2)) +
   scale_color_identity() +
   theme_classic(base_size = 14)
-  #+facet_wrap(~mtabName,scales="free",ncol=5)
-
 
   # Print the plot to the PDF
   print(p)
@@ -1874,8 +1885,7 @@ dev.off()
 ```
 
 ## Create a heatmap of significant temporal metabolites
-
-### All
+### Heatmap of all significant metabolites
 ```{r heatmap of significant diel metabolites}
 
 #Create a dataframe in a wide format with the median concentration of each metabolite by Site. 
@@ -1928,7 +1938,7 @@ mtab_heatmap <- df_long %>%
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_Intra_cellNorm_temporalSig_", today, "_bmg.pdf")
 
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 print(mtab_heatmap)
 
@@ -1936,7 +1946,7 @@ dev.off()
 
 ```
 
-### In all 24 timepoints (ntimepoint = 24)
+### Heatmap of significant metabolites found above LOD in all 24 timepoints (ntimepoint = 24)
 ```{r heatmap of significant diel metabolites}
 
 #Create a dataframe in a wide format with the median concentration of each metabolite by Site. 
@@ -1990,7 +2000,7 @@ mtab_heatmap <- df_long %>%
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_Intra_cellNorm_temporalSig_allTimepoints_", today, "_bmg.pdf")
 
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 print(mtab_heatmap)
 
@@ -2034,7 +2044,7 @@ metab_with_stability <- metab_rsd %>%
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtabRSD_vs_cellCycleEntropy_", today, "_bmg.pdf")
 
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 unique_names <- unique(metab_with_stability$mtabName)
 
@@ -2068,7 +2078,6 @@ for (i in seq_along(unique_names)) {
 }
 
 dev.off()
-
 
 ```
 
@@ -2108,7 +2117,7 @@ unique_names <- lm_results %>%
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_mtabRSD_vs_cellCycleEntropy_sig05_", today, "_bmg.pdf")
 
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 for (i in seq_along(unique_names)) {
   dynamic_title <- unique_names[i]  # Current title based on mtabName
@@ -2143,12 +2152,12 @@ dev.off()
 ## Plotting RSD over time for each metabolite
 ```{r metabolite variability plotting - all, warning=FALSE}
 
-scale_factor <- max(Intra_fullQC$cell_count_mean, na.rm = TRUE) / 150  # 200 = max RSD y-axis
+scale_factor <- max(Intra_fullQC$cell_count_mean, na.rm = TRUE) / 200 # 200 = max RSD y-axis
 
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_Intra_QCd_Mtab_RSD_overTime_", today, "_bmg.pdf")
 
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 8.5)
 
 unique_names <- unique(Intra_fullQC$mtabName)
 
@@ -2243,15 +2252,15 @@ dom_cellCycle_scaled <- dom_cellCycle %>%
 
 ```{r color palette for all metabolits}
 
-# After you have your 37 metabolite names in order:
+# After you have your 48 metabolite names in order:
 # Assume you have a character vector of metabolite names:
 metabolite_names <- unique(dom_cellCycle_scaled$mtabName)  # or wherever your 37 names are
 
 # Make sure the order matches exactly!
-palette_37 <- createPalette(37, seedcolors = c("#ff0000", "#00ff00", "#0000ff"))
+palette_48 <- createPalette(48, seedcolors = c("#ff0000", "#00ff00", "#0000ff"))
 
 # Attach names
-names(palette_37) <- metabolite_names
+names(palette_48) <- metabolite_names
 
 ```
 
@@ -2264,19 +2273,24 @@ bar_tops <- dom_cellCycle %>%
 label_df <- left_join(bar_tops, n_timepoints_df, by = "domCellCycle")
 
 # Generate the filename with the date automatically included
-#filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_stackedBar_cellCyle_", today, "_bmg.pdf")
+filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_stackedBar_cellCyle_", today, "_bmg.pdf")
 
-#pdf(filename, width = 8.5, height = 11)
+if (should_save) pdf(filename, width = 8.5, height = 11)
 
 stackedBar_cellCycle <- dom_cellCycle %>%
   ggplot(aes(x = domCellCycle, y = avg_concen_stage, fill = mtabName)) +
   geom_bar(stat = "identity") +
-  scale_fill_manual(values = palette_37) +
+  scale_fill_manual(values = palette_48) +
   labs(x = "Dominant Cell Cycle Stage",
        y = "Avg. attomole per cell",
        fill = "Metabolite",
        title = "Intracellular metabolite concentrations") +
   theme_bw() +
+      theme(
+      legend.key.size = unit(0.3, "cm"), 
+      legend.text = element_text(size = 6),
+      legend.title = element_text(size = 7),
+      legend.position = "bottom")+
   geom_text(data = label_df,
             aes(x = domCellCycle, y = ymax, label = paste0("n=", n_timepoints)),
             vjust = -0.5,
@@ -2294,13 +2308,13 @@ dev.off()
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_stackedBar_moleFraction_cellCyle_", today, "_bmg.pdf")
 
-#pdf(filename, width = 8.5, height = 11)
+if (should_save) pdf(filename, width = 8.5, height = 11)
 
 stackedBar_cellCycle_rel <- dom_cellCycle_scaled %>%
     mutate(abundance_level = if_else(mole_fraction >= 0.01, "dominant", "rare")) %>%
   ggplot(aes(x = domCellCycle, y = mole_fraction, fill = mtabName)) +
   geom_bar(stat = "identity") +
-  scale_fill_manual(values = palette_37)+
+  scale_fill_manual(values = palette_48)+
   scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
   labs(x = "Dominant Cell Cycle Stage",
        y = "Relative abundance",
@@ -2308,7 +2322,12 @@ stackedBar_cellCycle_rel <- dom_cellCycle_scaled %>%
        title = "Intracellular metabolite mole fractions",
        subtitle = "Dominant >= 1%") +
   facet_wrap(~abundance_level, scales = "free") +
-  theme_bw()
+  theme_bw()+
+      theme(
+      legend.key.size = unit(0.3, "cm"), 
+      legend.text = element_text(size = 6),
+      legend.title = element_text(size = 7),
+      legend.position = "bottom")
 
 print(stackedBar_cellCycle_rel)
 
@@ -2322,7 +2341,7 @@ dev.off()
 # Generate the filename with the date automatically included
 filename <- paste0("Scripts/R/Intracellular/figures/PD22_Pro11_QCd_cellNorm_treeMap_moleFraction_cellCyle_", today, "_bmg.pdf")
 
-#pdf(filename, width = 11, height = 8.5)
+if (should_save) pdf(filename, width = 11, height = 11)
 
 domCellCycle_treemap <- dom_cellCycle_scaled %>%
   mutate(abundance_level = if_else(mole_fraction >= 0.01, "dominant", "rare")) %>%
@@ -2330,13 +2349,20 @@ domCellCycle_treemap <- dom_cellCycle_scaled %>%
   geom_treemap() +
   geom_treemap_text(fontface = "italic", color = "white", place = "centre") +
   theme_classic()+
-  scale_fill_manual(values = palette_37)+
+     theme(
+      legend.key.size = unit(0.3, "cm"), 
+      legend.text = element_text(size = 6),
+      legend.title = element_text(size = 7),
+      legend.position = "bottom")+
+  scale_fill_manual(values = palette_48)+
   facet_wrap(~domCellCycle + abundance_level, scales = "free_y",
              ncol = 2, nrow=3)+
   labs(title = "Mole Fraction by Dominate Cell Cycle Stage")
 
 
 print(domCellCycle_treemap)
+
+dev.off()
 
 ```
 
@@ -2346,60 +2372,51 @@ print(domCellCycle_treemap)
 colnames(Intra_fullQC)
 
 #Blank adjusted, volume normalized, normalized to cell count - agCell
-Intra_fullQC%>%
-  select(label,cleanName,MW,r2_line,nPoints,LOD,LOQ,quantType,n_timepoints,cellNorm_blank_adj_concen_inSample_agCell,timepoint.x)%>%
+x <- Intra_fullQC%>%
+  select(label,cleanName,MW,r2_line,nPoints,LOD,LOQ,quantType,dilution_factor,n_timepoints,cellNorm_blank_adj_concen_inSample_agCell,timepoint.x)%>%
   mutate(timepoint.x = as.numeric(timepoint.x))%>%
   arrange(cleanName,timepoint.x)%>%
   select(-timepoint.x)%>%
   pivot_wider(names_from = label, values_from=cellNorm_blank_adj_concen_inSample_agCell)
-#%>%write.csv("Scripts/R/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_agCell_wCurveInfo.csv")
+
+
+if (should_save) write.csv(x,"Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_agCell_wCurveInfo.csv")
+
+rm(x)
 
 #Blank adjusted, volume normalized - nM
-Intra_fullQC%>%
-  select(label,cleanName,MW,r2_line,nPoints,LOD,LOQ,quantType,n_timepoints,Blank_adj_concentration_inSample_nM,timepoint.x)%>%
+x<- Intra_fullQC%>%
+  select(label,cleanName,MW,r2_line,nPoints,LOD,LOQ,quantType,dilution_factor,n_timepoints,Blank_adj_concentration_inSample_nM,timepoint.x)%>%
   mutate(timepoint.x = as.numeric(timepoint.x))%>%
   arrange(cleanName,timepoint.x)%>%
   select(-timepoint.x)%>%
   pivot_wider(names_from = label, values_from=Blank_adj_concentration_inSample_nM)
-#%>%write.csv("Scripts/R/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_nM_wCurveInfo.csv")
 
-#Average cell normalized concentration (agCell) per timepoint
-Intra_fullQC%>%
-  select(mtabName,quantType,timepoint.x,cellNorm_blank_adj_concen_inSample_agCell)%>%
-  group_by(mtabName,quantType,timepoint.x)%>%
-  summarise(mean_agCell = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE))%>%
-  ungroup()%>%
-  mutate(timepoint.x = as.numeric(timepoint.x))%>%
-  rename(timepoint=timepoint.x)%>%
-  mutate(Molecule.Name = paste(mtabName,quantType))%>%
-  select(-c(mtabName,quantType))%>%
-  arrange(Molecule.Name,timepoint)%>%
-  pivot_wider(names_from = timepoint, values_from = mean_agCell )
-#%>%write.csv(x = simple_output, file = "Scripts/R/r_csv_outputs/PD22_Pro11_Intra_fullQC_quantTable_meanConcentration_agCell_byTime.csv")
+if (should_save) write.csv(x,"Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_nM_wCurveInfo.csv")
 
-```
+rm(x)
 
-# Load in dilution data 
-```{r dilution data - load}
+#Average cell normalized concentration (agCell) per timepoint + sdev
 
-#DF10X
-df10x_quantTable <- read.csv('/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/20250508_DF10x/Pro11_RP_filters_Altis_DF10x)_MQ_mtabTable.2025.05.10.csv',
-                             check.names = FALSE) 
+x <- Intra_fullQC %>%
+  select(mtabName, timepoint.x, cellNorm_blank_adj_concen_inSample_agCell) %>%
+  group_by(mtabName, timepoint.x) %>%
+  summarise(
+    mean = mean(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    sd = sd(cellNorm_blank_adj_concen_inSample_agCell, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  # Ensure numeric ordering
+  mutate(time_num = as.numeric(timepoint.x)) %>%
+  pivot_longer(cols = c(mean, sd), names_to = "stat", values_to = "value") %>%
+  mutate(timepoint_label = paste0("T", time_num, "_", stat)) %>%
+  select(mtabName, time_num, timepoint_label, value) %>%
+  arrange(mtabName, time_num) %>%
+  select(-time_num) %>%
+  pivot_wider(names_from = timepoint_label, values_from = value)
 
-df10x_curveInfo <-read.csv('/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/20250508_DF10x/Pro11_RP_filters_Altis_DF10x)_MQ_curveInfo.2025.05.10.csv',
-                           check.names = FALSE)
+if (should_save) write.csv(x, file = "Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_fullQC_quantTable_meanSD_agCell_byTime.csv", row.names = FALSE)
 
-df10x_quantTable <- df10x_quantTable[1:7,]
-df10x_curveInfo <- df10x_curveInfo[1:7,]
-
-df10x_df <- merge(df10x_curveInfo,df10x_quantTable,
-                  by.x = "mtabName",
-                  by.y = "SRMname")
-
-rm(df10x_quantTable,df10x_curveInfo)
-
-#DF500X
+rm(x)
 
 ```
-
-

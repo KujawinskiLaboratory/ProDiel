@@ -11,18 +11,18 @@ editor_options:
 ```{r setup, include=FALSE}
 #From work PC
 # Set working directory for knitting
-#knitr::opts_knit$set(root.dir = "Z:/Brianna/Projects/Pro_Diel")
+knitr::opts_knit$set(root.dir = "Z:/Brianna/Projects/Pro_Diel")
 
 # Set working directory for interactive use
-#setwd("Z:/Brianna/Projects/Pro_Diel")
+setwd("Z:/Brianna/Projects/Pro_Diel")
 
 
 #From laptop
 # Set working directory for knitting
-knitr::opts_knit$set(root.dir = "/Volumes/KujLab/Brianna/Projects/Pro_Diel")
+#knitr::opts_knit$set(root.dir = "/Volumes/KujLab/Brianna/Projects/Pro_Diel")
 
 # Set working directory for interactive use
-setwd("/Volumes/KujLab/Brianna/Projects/Pro_Diel")
+#setwd("/Volumes/KujLab/Brianna/Projects/Pro_Diel")
 
 ```
 
@@ -49,10 +49,11 @@ library(ggplot2)
 library(rain)
 library(viridis)
 library(entropy)
-library(Polychrome)
 library(treemapify)
 library(broom)
 library(patchwork)
+library(vegan)
+library(ggpubr)
 
 ```
 
@@ -60,7 +61,7 @@ library(patchwork)
 Set to 1 if you want the script to save the plots, set to 0 if you do not want to save any plots.
 ```{r save plots setting}
 
-should_save <- 0  # or 1 to save
+should_save <- 1  # or 1 to save
 
 ```
 
@@ -475,18 +476,18 @@ intra_mm_curve <- read.csv("riMAVEN15/Pro11_RP_Filters_Original/Pro11_RP_filters
 ##### Load data quantified with the Mili-Q (MQ) generated standard curve - DF 10x
 ```{r load MQ quant and curve - DF10x}
 
-intra_mq_DF10x_quant <- read.csv("/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/Pro11_DF10x/Pro11_RP_filters_Altis_DF10x_MQ_mtabTable.2025.07.17.csv",check.names = FALSE)
+intra_mq_DF10x_quant <- read.csv("riMAVEN15/Pro11_DF10x/Pro11_RP_filters_Altis_DF10x_MQ_mtabTable.2025.07.17.csv",check.names = FALSE)
 
-intra_mq_DF10x_curve <- read.csv("/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/Pro11_DF10x/Pro11_RP_filters_Altis_DF10x_MQ_curveInfo.2025.07.17.csv",check.names = FALSE)
+intra_mq_DF10x_curve <- read.csv("riMAVEN15/Pro11_DF10x/Pro11_RP_filters_Altis_DF10x_MQ_curveInfo.2025.07.17.csv",check.names = FALSE)
 
 ```
 
 ##### Load data quantified with the Mili-Q (MQ) generated standard curve - DF 500x
 ```{r load MQ quant and curve - DF500x}
 
-intra_mq_DF500x_quant <- read.csv("/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/Pro11_DF500x/Pro11_RP_filters_Altis_DF500x_MQ_mtabTable.2025.07.17.csv",check.names = FALSE)
+intra_mq_DF500x_quant <- read.csv("riMAVEN15/Pro11_DF500x/Pro11_RP_filters_Altis_DF500x_MQ_mtabTable.2025.07.17.csv",check.names = FALSE)
 
-intra_mq_DF500x_curve <- read.csv("/Volumes/KujLab/Brianna/Projects/Pro_Diel/riMAVEN15/Pro11_DF500x/Pro11_RP_filters_Altis_DF500x_MQ_curveInfo.2025.07.17.csv",check.names = FALSE)
+intra_mq_DF500x_curve <- read.csv("riMAVEN15/Pro11_DF500x/Pro11_RP_filters_Altis_DF500x_MQ_curveInfo.2025.07.17.csv",check.names = FALSE)
 
 ```
 
@@ -1183,7 +1184,9 @@ Intra_zrbmndc <- Intra_zrbmndc%>%
 
 ```
 
-## Normalize final QC'd dataset to cell count
+## Cell count normalization
+Cell counts are in cell/mL and concentration is in nM (nanomole/L) so need to
+make sure units are the same and divide by 1000.
 ```{r normalziation}
 
 Intra_fullQC <- merge(Intra_zrbmndc,cellCounts_extrap,by = "label")
@@ -1191,7 +1194,7 @@ Intra_fullQC <- merge(Intra_zrbmndc,cellCounts_extrap,by = "label")
 colnames(Intra_fullQC)
 
 Intra_fullQC <- Intra_fullQC%>%
-  mutate(cellNorm_blank_adj_concen_inSample_agCell = ((Blank_adj_concentration_inSample_nM/cell_count)*(10^18/10^9)))
+  mutate(cellNorm_blank_adj_concen_inSample_agCell = ((Blank_adj_concentration_inSample_nM/cell_count/1000)*(10^18/10^9)))
 
 ```
 
@@ -2257,7 +2260,14 @@ dom_cellCycle_scaled <- dom_cellCycle %>%
 metabolite_names <- unique(dom_cellCycle_scaled$mtabName)  # or wherever your 37 names are
 
 # Make sure the order matches exactly!
-palette_48 <- createPalette(48, seedcolors = c("#ff0000", "#00ff00", "#0000ff"))
+palette_48 <- c(
+  "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#999999",
+  "#ADFF2F", "#8A2BE2", "#DC143C", "#00CED1", "#FFD700", "#1E90FF", "#B22222", "#4B0082",
+  "#DAA520", "#00FF7F", "#7FFF00", "#FF1493", "#A0522D", "#20B2AA", "#5F9EA0", "#8B008B",
+  "#CD5C5C", "#FF4500", "#2E8B57", "#6A5ACD", "#FF6347", "#40E0D0", "#FF8C00", "#BA55D3",
+  "#B0C4DE", "#3CB371", "#FA8072", "#4682B4", "#9ACD32", "#800000", "#4169E1", "#C71585",
+  "#F08080", "#8FBC8F", "#9932CC", "#FF00FF", "#708090", "#87CEEB", "#6B8E23", "#483D8B"
+)
 
 # Attach names
 names(palette_48) <- metabolite_names
@@ -2380,7 +2390,7 @@ x <- Intra_fullQC%>%
   pivot_wider(names_from = label, values_from=cellNorm_blank_adj_concen_inSample_agCell)
 
 
-if (should_save) write.csv(x,"Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_agCell_wCurveInfo.csv")
+if (should_save) write.csv(x,"Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_agCell_wCurveInfo_20250721.csv")
 
 rm(x)
 
@@ -2392,7 +2402,7 @@ x<- Intra_fullQC%>%
   select(-timepoint.x)%>%
   pivot_wider(names_from = label, values_from=Blank_adj_concentration_inSample_nM)
 
-if (should_save) write.csv(x,"Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_nM_wCurveInfo.csv")
+if (should_save) write.csv(x,"Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_fullQC_mtabQuant_nM_wCurveInfo_20250721.csv")
 
 rm(x)
 
@@ -2415,8 +2425,54 @@ x <- Intra_fullQC %>%
   select(-time_num) %>%
   pivot_wider(names_from = timepoint_label, values_from = value)
 
-if (should_save) write.csv(x, file = "Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_fullQC_quantTable_meanSD_agCell_byTime.csv", row.names = FALSE)
+if (should_save) write.csv(x, file = "Scripts/R/Intracellular/r_csv_outputs/PD22_Pro11_Intra_fullQC_quantTable_meanSD_agCell_byTime_20250721.csv", row.names = FALSE)
 
 rm(x)
+
+```
+
+#Additional Plots 
+## NMDS plot
+```{r nmds}
+
+nmds_data <- Intra_fullQC%>%
+  select(label,timepoint.x,mtabName,cellNorm_blank_adj_concen_inSample_agCell)%>%
+  mutate(timepoint.x = as.numeric(timepoint.x))%>%
+  arrange(mtabName,timepoint.x)%>%
+  rename(timepoint = timepoint.x)%>%
+  pivot_wider(names_from = mtabName, values_from = cellNorm_blank_adj_concen_inSample_agCell)
+
+nmds.mat <- as.matrix(nmds_data[,3:ncol(nmds_data)])
+row.names(nmds.mat) <- nmds_data[[1]]
+
+nmds.log <- log10(nmds.mat + 0.001)
+nmds.log.shifted <- nmds.log - min(nmds.log)
+
+
+set.seed(1)
+dist <- vegdist(nmds.log.shifted,dist='bray')
+
+set.seed(1)
+nmds <-
+  metaMDS(dist,
+          distance = "bray",
+          k = 3,
+          maxit = 999, 
+          trymax = 500,
+          wascores = TRUE)
+
+goodness(nmds)
+stressplot(nmds)
+
+data.scores = as.data.frame(scores(nmds))
+
+nmds_df <- data.frame(nmds_data$timepoint,nmds$points)
+
+nmds_plot <- ggscatter(nmds_df, x = "MDS1", y = "MDS2", color ="nmds_data.timepoint",size=3)+
+  geom_hline(yintercept=0,linetype=2)+
+  geom_vline(xintercept=0,linetype=2)+
+  theme_bw(base_size = 12)
+
+print(nmds_plot)
 
 ```
